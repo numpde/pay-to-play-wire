@@ -153,3 +153,21 @@ The consumer invoice lane passed all 28 tests from a clean frozen archive of
 consumer commit 3bb53c2a58f1e80bbcc374392f788f504923f21c, using its prepared
 offline image. This qualifies the invoice integration, not the consumer's whole
 repository or a deployment. No consumer files were edited and no peers contacted.
+
+0.1.1 preparation, 2026-10-19
+----------------------------
+Patch release for the separate GitHub release/Pages workflows, destination and
+native lifetime fixes, installed-artifact metadata qualification, documentation
+and regression checks. Runtime library source and interoperability vectors are
+unchanged from 0.1.0; the invoice version remains 2.
+
+Reviewed exact locked versions against OSV before qualification. No matching
+advisories were returned for the three runtime packages, Ruff or Debian make.
+Setuptools 82.0.1 matched GHSA-h35f-9h28-mq5c / PYSEC-2026-3447, aliases for
+CVE-2026-59890. The reported exclusion bypass concerns Unicode normalization of
+non-ASCII filenames/rules. This Linux build uses ASCII-only tracked paths and
+manifest rules, copies only declared package inputs, and verifies exact wheel
+and sdist inventories before publication. The affected naming condition is
+absent from this qualified build; the build-tool pin is retained.
+Maintainer advisory:
+https://github.com/pypa/setuptools/security/advisories/GHSA-h35f-9h28-mq5c

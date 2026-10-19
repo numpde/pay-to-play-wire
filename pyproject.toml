@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signed-invoice"
-version = "0.1.0"
+version = "0.1.1"
 description = "Strict exact-byte merchant invoices and Ed25519 envelopes"
 readme = "README.md"
 requires-python = ">=3.12"
