@@ -66,5 +66,31 @@ wheel hash; a tag name alone does not make bytes immutable. Release assets allow
 explicit acquisition followed by an offline, hash-locked installation.
 Keep acquisition credentials out of dependency images, layers and runtime.
 
+Set `project.version` in `pyproject.toml` for the next release and commit the
+changes. Publish releases and documentation separately from a clean checkout:
+
+```sh
+make publish/release TAG=v0.2.0
+make publish/pages
+```
+
+`publish/release` uses the GitHub repository at `origin`'s sole push URL. It requires
+the prepared tool image and dependency depot. It captures `HEAD` with Git,
+builds and runs all checks in that frozen source's offline containers, and
+requires `TAG` to match the package version. It creates an annotated local tag
+or checks an existing tag against `HEAD`, then pushes that tag. It uploads a
+draft release, downloads and compares every asset against the exact identities
+reported by the installed-artifact check, then publishes the verified draft.
+An existing release is rejected;
+published bytes are never replaced. A partial failure retains the source,
+artifacts, logs and API receipts under `.work/publication.*` for inspection.
+The tag is a required literal Make command-line argument; ambient `TAG` is ignored.
+
+`publish/pages` requires the `main` branch. It pushes `HEAD` to `origin/main`,
+configures Pages for `main/docs`, requests a build, then checks the live HTTPS
+page for the exact deployed source revision. It waits at most ten minutes for
+publication. Both commands run Git/GitHub orchestration on the host with the
+operator's existing authentication; credentials never enter package containers.
+
 Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;
 source provenance and validation records are in `notes/001_extraction.txt`.

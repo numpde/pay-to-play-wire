@@ -100,3 +100,18 @@ Pages publishes main/docs at https://numpde.github.io/signed-invoice/ .
 The initial deployment built and deployed successfully; the live URL returned
 HTTP 200 with the rendered API guide and the expected stylesheet URL.
 Consumer owners received the public artifact coordinates and unchanged hash.
+
+Maintained publication entry points
+-----------------------------------
+publish/release and publish/pages are separate Make targets. The shell owner
+reuses the existing native lifetime helper and contained package/check lanes.
+Neither named donor has a GitHub wheel/Pages publisher to copy wholesale.
+Release publication captures committed source with git archive, qualifies it
+with the prepared offline inputs, and binds uploaded bytes to the installed
+check's captured-artifact SHA-256 receipts before publishing a draft release.
+Package metadata checks derive the version/dependencies/Python requirement from
+the sdist's pyproject.toml, so a new release version has one source owner.
+The publisher captures origin's sole resolved push URL, inspects that same
+GitHub repository and uses the captured URL for writes. Pages pushes the captured
+source commit and verifies its revision marker in the live HTML.
+The existing v0.1.0 tag and release assets are unchanged by these workflow edits.

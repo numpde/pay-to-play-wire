@@ -15,6 +15,12 @@ containers. The host edits by hand and orchestrates shell/engine/Git operations.
 No host venv, pip, unittest, Ruff or build fallback and no fake container marker.
 Tests never acquire dependencies, build images or update locks implicitly.
 
+Publish GitHub releases and Pages through their separate Make targets. Release
+qualification runs against a frozen committed source snapshot; verify downloaded
+draft assets before making a release public and never replace published assets.
+Pages publication must verify the live source revision. Keep GitHub credentials
+in host orchestration, outside source snapshots and package containers.
+
 Keep acquisition, offline verification, image builds, package builds and tests
 explicit. Downloads require a command-line NETWORK_INTERFACE. Review exact package
 advisories before installation; verify actual locked bytes offline. Ordinary

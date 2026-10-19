@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -61,6 +62,8 @@ def check():
             with regular_file(source, 0) as reader, (captured / source.name).open("xb") as writer:
                 shutil.copyfileobj(reader, writer)
         _check_captured_artifacts(captured)
+        for path in sorted(captured.iterdir()):
+            print("QUALIFIED_SHA256", hashlib.sha256(path.read_bytes()).hexdigest(), path.name, flush=True)
 
 
 def _check_captured_artifacts(artifacts):
@@ -116,6 +119,7 @@ def _check_captured_artifacts(artifacts):
         }
         if {str(path.relative_to(source)) for path in source.rglob("*") if path.is_file()} != expected_source:
             raise ValueError("Cannot verify package: sdist contents differ from the declared source distribution.")
+        project = tomllib.loads((source / "pyproject.toml").read_text())["project"]
         execute(
             [
                 sys.executable,
@@ -168,14 +172,16 @@ import importlib.metadata
 import importlib.resources
 import importlib.util
 import json
+import sys
 from pathlib import Path
 import signed_invoice
 from signed_invoice import decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice, validate_payment_route
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 distribution = importlib.metadata.distribution('signed-invoice')
-assert distribution.version == '0.1.0'
-assert distribution.requires == ['cryptography==50.0.2']
-assert distribution.metadata['Requires-Python'] == '>=3.12'
+project = json.loads(sys.argv[1])
+assert distribution.version == project['version']
+assert distribution.requires == project['dependencies']
+assert distribution.metadata['Requires-Python'] == project['requires-python']
 assert Path(signed_invoice.__file__).resolve().is_relative_to(Path(__import__('sys').prefix))
 for forbidden in ('tools', 'tests', 'p2p_invoice', 'agent_mail', 'agent_mail_p2p'):
     assert importlib.util.find_spec(forbidden) is None, forbidden
@@ -217,7 +223,7 @@ print('Installed distribution origin, metadata, resources and crypto round trip 
                 cwd=root,
             )
             execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
-            execute([runtime, "-I", "-B", "-c", code], cwd=root)
+            execute([runtime, "-I", "-B", "-c", code, json.dumps(project)], cwd=root)
 
 
 if __name__ == "__main__":
