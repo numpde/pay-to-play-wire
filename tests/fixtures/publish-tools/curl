@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# These publication boundary checks stop before any HTTP request.
+printf 'Unexpected HTTP request in offline publication test.\n' >&2
+exit 97

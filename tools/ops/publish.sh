@@ -30,7 +30,16 @@ finish() {
     exit "$status"
 }
 trap finish EXIT
-native() { local operation=$1 budget=$2; shift 2; inference_native "$operation" "$budget" stdio "$@"; }
+native() {
+    local operation=$1 budget=$2 status=0
+    shift 2
+    inference_native "$operation" "$budget" stdio "$@" || status=$?
+    if ! "$inference_retirement_confirmed"; then
+        if [[ "$status" == 0 ]]; then status=2; fi
+        exit "$status"
+    fi
+    return "$status"
+}
 fail() { printf '%s\n' "$1" >&2; exit 2; }
 for tool in git gh curl make tar cp cmp mktemp sha256sum stat head tr grep cut; do command -v "$tool" >/dev/null; done
 [[ -z $(git status --porcelain) ]] || fail 'Cannot publish: commit or remove pending checkout changes first.'
@@ -48,6 +57,21 @@ case "$push_url" in
     git@github.com:*|https://github.com/*|ssh://git@github.com/*) ;;
     *) fail 'Cannot publish: origin must use a github.com push URL without embedded credentials.' ;;
 esac
+# Git resolves origin's push URL above, then resolves an explicit push URL again.
+# Reject matching routing rules so the later push cannot change this destination.
+routing_status=0
+native 'Git URL routing inspection' 30 git config --null --get-regexp '^url\..*\.(insteadof|pushinsteadof)$' \
+    > "$scratch/url-rewrites" || routing_status=$?
+if [[ "$routing_status" != 0 && "$routing_status" != 1 ]]; then
+    fail 'Cannot publish: Git URL routing configuration could not be inspected; retained receipts show the failure.'
+fi
+while IFS= read -r -d '' rule; do
+    [[ "$rule" == *$'\n'* ]] || fail 'Cannot publish: Git returned malformed URL routing configuration.'
+    prefix=${rule#*$'\n'}
+    if [[ "$push_url" == "$prefix"* ]]; then
+        fail 'Cannot publish: a Git URL rewrite matches the captured push URL; choose a canonical push URL with no matching rewrite rules.'
+    fi
+done < "$scratch/url-rewrites"
 native 'GitHub repository inspection' 30 gh repo view "$push_url" --json nameWithOwner --jq .nameWithOwner > "$scratch/repository"
 repository=$(cat "$scratch/repository")
 readonly repository

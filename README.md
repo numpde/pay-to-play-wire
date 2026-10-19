@@ -74,10 +74,13 @@ make publish/release TAG=v0.2.0
 make publish/pages
 ```
 
-`publish/release` uses the GitHub repository at `origin`'s sole push URL. It requires
-the prepared tool image and dependency depot. It captures `HEAD` with Git,
-builds and runs all checks in that frozen source's offline containers, and
-requires `TAG` to match the package version. It creates an annotated local tag
+Both publishers use the GitHub repository at `origin`'s sole push URL. Matching
+Git URL rewrite rules are rejected before publication so the captured destination
+cannot change during push.
+
+`publish/release` requires the prepared tool image and dependency depot. It
+captures `HEAD` with Git, builds and runs all checks in that frozen source's
+offline containers, and requires `TAG` to match the package version. It creates an annotated local tag
 or checks an existing tag against `HEAD`, then pushes that tag. It uploads a
 draft release, downloads and compares every asset against the exact identities
 reported by the installed-artifact check, then publishes the verified draft.

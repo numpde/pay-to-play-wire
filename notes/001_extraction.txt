@@ -124,3 +124,32 @@ The run list exposed duplicate builds from a source push plus an explicit reques
 The publisher now requests a build only when source and configuration were both
 unchanged. It waits through a previous failed build receipt while a new request
 is still queued; only the live matching revision establishes publication.
+
+Publication and consumer QA/QC, 2026-10-19
+-----------------------------------------
+Sequential review covered codec ownership, consumer integration, contained
+workflows, publication effects and diagnostics. Two publication defects were
+reproduced and corrected: a captured push URL could be rewritten a second time
+by Git, and an HTTP 404 could permit continued work after the native lifetime
+owner reported that process retirement was unknown. The publisher now rejects
+matching URL routing rules and stops immediately on unknown retirement.
+Offline regression checks also distinguish absent, unrelated and unreadable
+routing configuration without granting network or engine access to the tests.
+
+A frozen source snapshot completed the release target with local Git/GitHub
+write doubles: Ruff, 33 repository checks, 46 invoice tests and fresh installs of
+the original wheel and the wheel rebuilt from the sdist all passed. Altering a
+downloaded wheel caused rejection with the mock draft retained and unpublished.
+A real Git configuration with chained push rewrites was rejected before GitHub
+inspection or push. The lifetime fault test confirms no further native operation
+runs after unknown retirement. These publication checks used local doubles;
+they did not create a new live release or replace existing release assets.
+Qualified publisher script SHA-256:
+a828e72db23fd9d70caaa626fb41ab9a2d9d496aa7a96c14e472c6d6f3f6fe95
+Retained qualification log SHA-256:
+212df19f3c99e98d5f5e5d082ea421c90fff94691c156b45a0c4e08235b00483
+
+The consumer invoice lane passed all 28 tests from a clean frozen archive of
+consumer commit 3bb53c2a58f1e80bbcc374392f788f504923f21c, using its prepared
+offline image. This qualifies the invoice integration, not the consumer's whole
+repository or a deployment. No consumer files were edited and no peers contacted.

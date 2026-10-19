@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'git %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
+case "$1" in
+    status) exit 0 ;;
+    rev-parse) printf '%040d\n' 1 ;;
+    remote) printf 'git@github.com:numpde/signed-invoice.git\n' ;;
+    config)
+        case "$PUBLISH_TEST_MODE" in
+            matching) printf 'url.git@github.com:another/.pushinsteadof\ngit@github.com:numpde/\0' ;;
+            unrelated) printf 'url.git@github.com:another/.pushinsteadof\ngit@github.com:unrelated/\0' ;;
+            absent|unknown) exit 1 ;;
+            config-error) exit 3 ;;
+            *) exit 97 ;;
+        esac ;;
+    *) exit 97 ;;
+esac

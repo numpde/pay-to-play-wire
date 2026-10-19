@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'gh %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
+case "$1 $2" in
+    'repo view') printf 'numpde/signed-invoice\n' ;;
+    'api --hostname')
+        if [[ $PUBLISH_TEST_MODE == unknown ]]; then
+            printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
+            exit 1
+        fi
+        printf 'HTTP/2.0 200 OK\r\n\r\n{"tag_name":"v0.1.0"}\n' ;;
+    *) exit 97 ;;
+esac
