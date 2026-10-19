@@ -1,0 +1,47 @@
+{
+  "format": "p2p-invoice-codec-v2/1",
+  "scope": "Synthetic unsigned invoice/hash/voucher inputs only. No keys, issuer enrollment, deployed token core, accepted payment or commercial offer.",
+  "invoicePrefixUtf8": "P2P-INVOICE-2\n",
+  "voucherType": "Voucher(address customer,uint256 channelId,uint256 cumulativeTotal,bytes32 invoiceHash)",
+  "cases": [
+    {
+      "name": "native",
+      "invoiceUtf8": "{\"version\":2,\"merchantId\":\"00000000-0000-4000-8000-000000000001\",\"merchantKeyId\":\"fixture-mail-key-1\",\"invoiceId\":\"fixture-v2-native\",\"chainId\":\"31337\",\"paymentContract\":\"0x3333333333333333333333333333333333333333\",\"channelId\":\"7\",\"customer\":\"0x1111111111111111111111111111111111111111\",\"quotedPayee\":\"0x2222222222222222222222222222222222222222\",\"amount\":\"5\",\"acceptBy\":2000003600,\"redeemBy\":2000007200,\"beneficiary\":{\"kind\":\"agent-mail-owner\",\"ownerPublicKey\":{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\"}},\"serviceTerms\":{\"version\":1,\"audience\":\"https://mail.example.invalid\",\"kind\":\"mailbox.create\",\"address\":\"fixture-1@mail.example.invalid\",\"quantity\":1,\"servicePolicy\":{\"fixtureOnly\":true,\"terms\":\"synthetic-codec-example-not-a-commercial-offer\"}},\"asset\":\"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"}",
+      "invoiceBase64": "eyJ2ZXJzaW9uIjoyLCJtZXJjaGFudElkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxIiwibWVyY2hhbnRLZXlJZCI6ImZpeHR1cmUtbWFpbC1rZXktMSIsImludm9pY2VJZCI6ImZpeHR1cmUtdjItbmF0aXZlIiwiY2hhaW5JZCI6IjMxMzM3IiwicGF5bWVudENvbnRyYWN0IjoiMHgzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzIiwiY2hhbm5lbElkIjoiNyIsImN1c3RvbWVyIjoiMHgxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwicXVvdGVkUGF5ZWUiOiIweDIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIiLCJhbW91bnQiOiI1IiwiYWNjZXB0QnkiOjIwMDAwMDM2MDAsInJlZGVlbUJ5IjoyMDAwMDA3MjAwLCJiZW5lZmljaWFyeSI6eyJraW5kIjoiYWdlbnQtbWFpbC1vd25lciIsIm93bmVyUHVibGljS2V5Ijp7Imt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiMTFxWUFZS3hDcmZWU183VHlXUUhPZzdoY3ZQYXBpTWxyd0lhYVBjSFVSbyJ9fSwic2VydmljZVRlcm1zIjp7InZlcnNpb24iOjEsImF1ZGllbmNlIjoiaHR0cHM6Ly9tYWlsLmV4YW1wbGUuaW52YWxpZCIsImtpbmQiOiJtYWlsYm94LmNyZWF0ZSIsImFkZHJlc3MiOiJmaXh0dXJlLTFAbWFpbC5leGFtcGxlLmludmFsaWQiLCJxdWFudGl0eSI6MSwic2VydmljZVBvbGljeSI6eyJmaXh0dXJlT25seSI6dHJ1ZSwidGVybXMiOiJzeW50aGV0aWMtY29kZWMtZXhhbXBsZS1ub3QtYS1jb21tZXJjaWFsLW9mZmVyIn19LCJhc3NldCI6IjB4ZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZSJ9",
+      "invoiceHash": "0x0d6f96d726237634a521686b9e4a0b57dea9f40bf10cf4fa59cf24f6168d41bc",
+      "voucherDomain": {
+        "name": "PayToPlay",
+        "version": "2",
+        "chainId": "31337",
+        "verifyingContract": "0x3333333333333333333333333333333333333333"
+      },
+      "voucher": {
+        "customer": "0x1111111111111111111111111111111111111111",
+        "channelId": "7",
+        "cumulativeTotal": "5",
+        "invoiceHash": "0x0d6f96d726237634a521686b9e4a0b57dea9f40bf10cf4fa59cf24f6168d41bc"
+      },
+      "voucherDigest": "0xb5306dcbdfc87439ece347d3e0e779b00a55d76813f996bd05995d330cf2a6dc"
+    },
+    {
+      "name": "erc20",
+      "invoiceUtf8": "{\"version\":2,\"merchantId\":\"00000000-0000-4000-8000-000000000001\",\"merchantKeyId\":\"fixture-mail-key-1\",\"invoiceId\":\"fixture-v2-erc20\",\"chainId\":\"31337\",\"paymentContract\":\"0x4444444444444444444444444444444444444444\",\"channelId\":\"7\",\"customer\":\"0x1111111111111111111111111111111111111111\",\"quotedPayee\":\"0x2222222222222222222222222222222222222222\",\"amount\":\"7\",\"acceptBy\":2000003600,\"redeemBy\":2000007200,\"beneficiary\":{\"kind\":\"agent-mail-owner\",\"ownerPublicKey\":{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\"}},\"serviceTerms\":{\"version\":1,\"audience\":\"https://mail.example.invalid\",\"kind\":\"mailbox.create\",\"address\":\"fixture-1@mail.example.invalid\",\"quantity\":1,\"servicePolicy\":{\"fixtureOnly\":true,\"terms\":\"synthetic-codec-example-not-a-commercial-offer\"}},\"asset\":\"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+      "invoiceBase64": "eyJ2ZXJzaW9uIjoyLCJtZXJjaGFudElkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxIiwibWVyY2hhbnRLZXlJZCI6ImZpeHR1cmUtbWFpbC1rZXktMSIsImludm9pY2VJZCI6ImZpeHR1cmUtdjItZXJjMjAiLCJjaGFpbklkIjoiMzEzMzciLCJwYXltZW50Q29udHJhY3QiOiIweDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQiLCJjaGFubmVsSWQiOiI3IiwiY3VzdG9tZXIiOiIweDExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJxdW90ZWRQYXllZSI6IjB4MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMiIsImFtb3VudCI6IjciLCJhY2NlcHRCeSI6MjAwMDAwMzYwMCwicmVkZWVtQnkiOjIwMDAwMDcyMDAsImJlbmVmaWNpYXJ5Ijp7ImtpbmQiOiJhZ2VudC1tYWlsLW93bmVyIiwib3duZXJQdWJsaWNLZXkiOnsia3R5IjoiT0tQIiwiY3J2IjoiRWQyNTUxOSIsIngiOiIxMXFZQVlLeENyZlZTXzdUeVdRSE9nN2hjdlBhcGlNbHJ3SWFhUGNIVVJvIn19LCJzZXJ2aWNlVGVybXMiOnsidmVyc2lvbiI6MSwiYXVkaWVuY2UiOiJodHRwczovL21haWwuZXhhbXBsZS5pbnZhbGlkIiwia2luZCI6Im1haWxib3guY3JlYXRlIiwiYWRkcmVzcyI6ImZpeHR1cmUtMUBtYWlsLmV4YW1wbGUuaW52YWxpZCIsInF1YW50aXR5IjoxLCJzZXJ2aWNlUG9saWN5Ijp7ImZpeHR1cmVPbmx5Ijp0cnVlLCJ0ZXJtcyI6InN5bnRoZXRpYy1jb2RlYy1leGFtcGxlLW5vdC1hLWNvbW1lcmNpYWwtb2ZmZXIifX0sImFzc2V0IjoiMHhhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIn0=",
+      "invoiceHash": "0xb3bcb43b38212ff1fd1186ae2b105334341eef2c4ab9955703c068d8eb7795f5",
+      "voucherDomain": {
+        "name": "PayToPlay",
+        "version": "2",
+        "chainId": "31337",
+        "verifyingContract": "0x4444444444444444444444444444444444444444"
+      },
+      "voucher": {
+        "customer": "0x1111111111111111111111111111111111111111",
+        "channelId": "7",
+        "cumulativeTotal": "7",
+        "invoiceHash": "0xb3bcb43b38212ff1fd1186ae2b105334341eef2c4ab9955703c068d8eb7795f5"
+      },
+      "voucherDigest": "0xb1d96b97b4f9b890ace807f2a8cb58c245cf2f4f330a5825ed1a40521b33cd41"
+    }
+  ],
+  "digestOracle": "Expected EIP-712 digests independently supplied by the dapp32 owner using its cached pinned-viem offline probe against initial artifact SHA-256 4ab0483ec1c499b4cb8ecf790f9779d15d5caee996e34c0d57b1c57d3de94c13. No signatures, keys, chain calls or token settlement were tested."
+}

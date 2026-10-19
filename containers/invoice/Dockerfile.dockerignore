@@ -1,0 +1,13 @@
+**
+!requirements/
+!requirements/invoice.lock
+!requirements/make.json
+!containers/
+!containers/invoice/
+!containers/invoice/Dockerfile
+!containers/invoice/Dockerfile.dockerignore
+!tools/
+!tools/dependencies/
+!tools/dependencies/wheels.py
+!tools/ops/
+!tools/ops/container_guard.py

@@ -1,0 +1,90 @@
+"""Observe the maintained repository lane's effective kernel grants.
+
+Port of all eight RuntimePostureTests at
+https://github.com/numpde/magnet-deploy/blob/2d4ee50b0359e71900fce9289ea01f46d0f41249/repository_checks/test_container_posture.py#L18
+Identity and numeric resources follow tools/ops/invoice.sh: caller ownership,
+512 MiB, two CPUs, 64 PIDs and zero swap. The launcher injects expected identity;
+reading the process's own UID as the expected value would erase this proof.
+Installed-artifact isolation has its own source-free package test lane.
+"""
+
+from tools.ops.container_guard import require_container
+
+require_container()
+
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+
+def mount_record(destination):
+    for line in Path("/proc/self/mountinfo").read_text().splitlines():
+        fields = line.split()
+        separator = fields.index("-")
+        if fields[4] == destination:
+            return fields[separator + 1], set(fields[5].split(",")) | set(fields[separator + 3].split(","))
+    raise AssertionError(f"Cannot verify runtime mount posture: {destination} has no mountinfo record.")
+
+
+def process_status():
+    return dict(line.split(":", 1) for line in Path("/proc/self/status").read_text().splitlines())
+
+
+class RuntimePostureTests(unittest.TestCase):
+    def test_runs_as_explicit_non_root_caller_identity(self):
+        for variable, actual in (("EXPECTED_UID", os.getuid()), ("EXPECTED_GID", os.getgid())):
+            expected = os.environ.get(variable)
+            self.assertIsNotNone(expected, msg=f"Cannot verify caller identity: the maintained launcher must inject {variable}.")
+            self.assertTrue(
+                expected.isdecimal(), msg=f"Cannot verify caller identity: {variable} must contain a numeric identity."
+            )
+            self.assertNotEqual(int(expected), 0)
+            self.assertEqual(int(expected), actual, msg=f"Process identity differs from the launcher grant for {variable}.")
+
+    def test_root_is_read_only_and_tmp_is_writable(self):
+        self.assertIn("ro", mount_record("/")[1])
+        with tempfile.NamedTemporaryFile(dir="/tmp") as probe:
+            probe.write(b"expected")
+            probe.flush()
+            self.assertEqual(b"expected", Path(probe.name).read_bytes())
+
+    def test_has_no_effective_linux_capabilities(self):
+        self.assertEqual(0, int(process_status()["CapEff"].strip(), 16))
+
+    def test_kernel_enforces_no_new_privileges(self):
+        self.assertEqual("1", process_status()["NoNewPrivs"].strip())
+
+    def test_has_only_loopback_network_interface(self):
+        self.assertEqual({"lo"}, {path.name for path in Path("/sys/class/net").iterdir()})
+
+    def test_tmp_is_a_hardened_writable_tmpfs(self):
+        filesystem, options = mount_record("/tmp")
+        self.assertEqual("tmpfs", filesystem)
+        self.assertTrue({"rw", "noexec", "nosuid", "nodev"} <= options)
+
+    def test_cgroup_v2_enforces_resource_bounds(self):
+        cgroup = Path("/sys/fs/cgroup")
+        for name, expected in (("pids.max", "64"), ("memory.max", "536870912"), ("memory.swap.max", "0")):
+            self.assertEqual(
+                expected, (cgroup / name).read_text().strip(), msg=f"Cgroup {name} differs from the maintained resource grant."
+            )
+        quota, period = map(int, (cgroup / "cpu.max").read_text().split())
+        self.assertEqual(2 * period, quota, msg="CPU quota differs from the maintained two-CPU grant.")
+
+    def test_source_is_visible_but_cannot_be_written(self):
+        source = Path("/workspace/src/signed_invoice/codec.py")
+        self.assertTrue(source.is_file())
+        with self.assertRaises(OSError):
+            with source.open("ab"):
+                self.fail("Source write unexpectedly succeeded.")
+
+    def test_private_checkout_state_and_engine_sockets_are_absent(self):
+        for name in (".git", ".agents", ".aws", ".codex", ".venv", ".work"):
+            self.assertFalse((Path("/workspace") / name).exists(), msg=name)
+        self.assertFalse(Path("/var/run/docker.sock").exists())
+        self.assertFalse(Path("/run/podman/podman.sock").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

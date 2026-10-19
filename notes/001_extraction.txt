@@ -1,0 +1,34 @@
+Shared merchant invoice extraction
+==================================
+
+Protocol source: pay-to-play 1b65ebc3cd25f8685c733701065d5dcce848a7e7.
+Copied packages/invoice/src/p2p_invoice/{codec,payment}.py and all three test
+modules; adapted imports/layout and added detached signing and complete envelope
+encoding/decoding. The package accepts invoice version 2; callers
+explicitly supply the signing domain. There is no default or domain discovery.
+Tests supply vector-declared domains without changing invoice bytes.
+Original codec SHA-256:
+5027db27c30ff919889a0618029d74c63f806e3e8f48ab9a447da255bc8113dd
+Original payment SHA-256:
+f3ecce86d2ef98a137317a913cd5c48610db6b8cef1c75d5b479b3b53bb7f392
+
+Unchanged retained fixture, now vectors/invoice.json as installed package data:
+SHA-256 0f9cad827af4ac8129ce961bb11909f7f2a8ef539a44af1ebf055bf57016d8c9
+It contains synthetic protocol/voucher vectors, not commercial or deployment proof.
+
+Workflow precedents: pay-to-play tools/ops/invoice.sh, docker.sh,
+docker_client.sh, inference_native.sh, bound_http_proxy.py, container_guard.py,
+containers/invoice, requirements/invoice.lock and invoice launcher tests.
+NMRNet 806d7f9 supplies the stronger captured-context/input-label admission
+practice (tools/checker.sh), actual dependency-byte checks and nonreplacing
+durable publication (tools/wheelhouse.py and artifacts.py), live kernel posture
+checks (repository_checks/test_container_port_runtime.py), and isolated installed
+distribution checks (tools/provider_core_tests.py and provider-core contracts).
+These are selected subjects. The full P2P imported repository suite retains
+unmapped NMR scientific obligations; it is not a suitable blind library gate.
+
+Consumer source inspected: agent-mail 17ba434eef79a32375ddbc28e88459f1313556e5.
+Mail retains product projection, consent/reservation, storage, runtime key
+selection and fulfillment. P2P retains ledger and admission. Neither consumer
+has been changed by this repository. Distribution/adoption and fresh consumer
+runtime evidence must be recorded separately from local codec validation.

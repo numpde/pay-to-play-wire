@@ -1,0 +1,9 @@
+include README.md pyproject.toml
+recursive-include src *.py *.json
+recursive-include docs *.md
+prune tests
+prune tools
+prune containers
+prune requirements
+prune notes
+exclude AGENTS.md Makefile ruff.toml

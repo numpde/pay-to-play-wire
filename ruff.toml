@@ -1,0 +1,9 @@
+# Adapted from the recorded donor policy for this Python library and its tools.
+target-version = "py312"
+line-length = 130
+src = ["src", "tools", "tests"]
+lint.select = ["E", "F", "W", "B", "I", "UP", "ARG", "PTH", "RUF"]
+lint.ignore = ["E501", "RUF015"]
+# Operational guards precede other imports; unittest owns assertions.
+lint.per-file-ignores = { "tools/**" = ["E402"], "tests/**" = ["E402"] }
+lint.isort.known-first-party = ["signed_invoice", "tools", "tests"]

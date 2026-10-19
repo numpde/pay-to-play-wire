@@ -1,0 +1,279 @@
+"""Invoice wire laws, real signatures, and independent retained byte expectations."""
+
+from tools.ops.container_guard import require_container
+
+require_container()
+
+import base64
+import hashlib
+import json
+import unittest
+from importlib.resources import files
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from signed_invoice import InvoiceError, JsonNumber, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
+
+FIXTURE = files("signed_invoice").joinpath("vectors/invoice.json")
+
+
+class InvoiceCodecTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.vectors = json.loads(FIXTURE.read_bytes())
+        cls.domain = cls.vectors["invoicePrefixUtf8"].encode()
+        cls.raw = cls.vectors["cases"][0]["invoiceUtf8"].encode()
+        cls.key = Ed25519PrivateKey.generate()
+        cls.other_key = Ed25519PrivateKey.generate()
+        fields = decode_invoice(cls.raw)
+        cls.trust = {
+            "domain": cls.domain,
+            "merchant_id": fields["merchantId"],
+            "merchant_key_id": fields["merchantKeyId"],
+            "public_key": cls.key.public_key(),
+        }
+
+    def changed(self, field, value):
+        fields = json.loads(self.raw)
+        fields[field] = value
+        return json.dumps(fields, ensure_ascii=False).encode()
+
+    def verify(self, envelope):
+        return verify_invoice(envelope, **self.trust)
+
+    def test_signs_prefixed_original_bytes_directly(self):
+        envelope = json.loads(sign_invoice(self.raw, self.key, domain=self.domain))
+        signature = base64.b64decode(envelope["signature"])
+        self.key.public_key().verify(signature, self.domain + self.raw)
+        for wrong in (self.raw, hashlib.sha256(self.domain + self.raw).digest(), self.domain + self.raw + b"\n"):
+            with self.subTest(preimage=wrong[:20]), self.assertRaises(InvalidSignature):
+                self.key.public_key().verify(signature, wrong)
+
+    def test_whitespace_order_unicode_and_escapes_are_never_normalized(self):
+        for raw in (
+            self.raw + b"\n",
+            json.dumps(json.loads(self.raw), indent=2).encode(),
+            self.raw.replace(b'"version"', b'"versi\\u006fn"'),
+            self.raw.replace(b'"fixtureOnly":true', '"fixtureOnly":true,"text":"é𐐀"'.encode()),
+        ):
+            with self.subTest(raw=raw[:20]):
+                self.assertEqual(raw, self.verify(sign_invoice(raw, self.key, domain=self.domain)))
+                self.assertNotEqual(invoice_hash(self.raw, domain=self.domain), invoice_hash(raw, domain=self.domain))
+
+    def test_wrong_key_signature_bytes_and_binding_are_rejected(self):
+        envelope = json.loads(sign_invoice(self.raw, self.key, domain=self.domain))
+        variants = [
+            dict(envelope, signature=base64.b64encode(bytes(64)).decode()),
+            dict(envelope, bytes=base64.b64encode(self.raw + b"\n").decode()),
+        ]
+        for variant in variants:
+            with self.subTest(variant=tuple(variant)), self.assertRaises(InvoiceError):
+                self.verify(json.dumps(variant).encode())
+        for trust in (
+            dict(self.trust, public_key=self.other_key.public_key()),
+            dict(self.trust, merchant_id="00000000-0000-0000-0000-000000000002"),
+            dict(self.trust, merchant_key_id="other"),
+        ):
+            with self.subTest(binding=trust["merchant_key_id"]), self.assertRaises(InvoiceError):
+                verify_invoice(json.dumps(envelope).encode(), **trust)
+
+    def test_base64_rejects_noncanonical_and_oversize_representations(self):
+        # Force padding so the missing-padding stimulus changes the wire value.
+        original = json.loads(sign_invoice(self.raw + b" ", self.key, domain=self.domain))
+        for field, oversized_length in (("bytes", 16385), ("signature", 65)):
+            value = original[field]
+            for invalid in (
+                value + "=",
+                value + "\n",
+                " " + value,
+                value.rstrip("="),
+                "_" + value[1:],
+                "é",
+                1,
+                None,
+                base64.b64encode(bytes(oversized_length)).decode(),
+            ):
+                with self.subTest(field=field, value_type=type(invalid)), self.assertRaises(InvoiceError):
+                    self.verify(json.dumps(dict(original, **{field: invalid})).encode())
+        # A 64-byte signature ends in ==; change unused pad bits without changing its decoded value.
+        value = original["signature"]
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        invalid = value[:-3] + alphabet[alphabet.index(value[-3]) + 1] + "=="
+        self.assertEqual(base64.b64decode(value), base64.b64decode(invalid))
+        with self.assertRaises(InvoiceError):
+            self.verify(json.dumps(dict(original, signature=invalid)).encode())
+
+    def test_envelope_shape_duplicates_and_json_are_rejected(self):
+        original = sign_invoice(self.raw, self.key, domain=self.domain)
+        for raw in (
+            b"{}",
+            b"[]",
+            b"null",
+            b"true",
+            b"",
+            b"\xef\xbb\xbf" + original,
+            b"\xff",
+            original[:-1] + b',"bytes":"duplicate"}',
+            original[:-1] + b',"extra":1}',
+            original.replace(b'"signature"', b'"signature":null,"signat\\u0075re"'),
+        ):
+            with self.subTest(raw=raw[:24]), self.assertRaises(InvoiceError):
+                self.verify(raw)
+
+    def test_top_level_members_are_exact(self):
+        fields = json.loads(self.raw)
+        for field in fields:
+            variant = dict(fields)
+            del variant[field]
+            with self.subTest(missing=field), self.assertRaises(InvoiceError):
+                decode_invoice(json.dumps(variant).encode())
+            with self.subTest(null=field), self.assertRaises(InvoiceError):
+                decode_invoice(self.changed(field, None))
+        for raw in (b"[]", b"null", b"true", self.raw[:-1] + b',"extra":1}'):
+            with self.subTest(raw=raw[:10]), self.assertRaises(InvoiceError):
+                decode_invoice(raw)
+
+    def test_integer_token_grammar_is_strict(self):
+        for field in ("version", "acceptBy", "redeemBy"):
+            old = b'"' + field.encode() + b'":' + str(json.loads(self.raw)[field]).encode()
+            for token in (b"true", b'"1"', b"-0", b"1.0", b"1e0", b"-1", b"01", b"9007199254740992"):
+                raw = self.raw.replace(old, b'"' + field.encode() + b'":' + token)
+                with self.subTest(field=field, token=token), self.assertRaises(InvoiceError):
+                    decode_invoice(raw)
+
+    def test_uint256_decimal_string_grammar_and_boundaries(self):
+        for field in ("chainId", "channelId", "amount"):
+            for invalid in (0, True, "", "01", "+1", "-0", " 1", "1 ", "1.0", "1e0", "\u0661", str(2**256), "9" * 5000):
+                with self.subTest(field=field, invalid=str(invalid)[:10]), self.assertRaises(InvoiceError):
+                    decode_invoice(self.changed(field, invalid))
+            self.assertEqual(str(2**256 - 1), decode_invoice(self.changed(field, str(2**256 - 1)))[field])
+            if field != "amount":
+                self.assertEqual("0", decode_invoice(self.changed(field, "0"))[field])
+        with self.assertRaises(InvoiceError):
+            decode_invoice(self.changed("amount", "0"))
+
+    def test_deadline_order_and_endpoints(self):
+        fields = json.loads(self.raw)
+        fields.update(acceptBy=0, redeemBy=2**53 - 1)
+        self.assertEqual(2**53 - 1, decode_invoice(encode_invoice(fields))["redeemBy"])
+        for deadline in (fields["redeemBy"], fields["redeemBy"] + 1):
+            fields["acceptBy"] = deadline
+            with self.assertRaises(InvoiceError):
+                encode_invoice(fields)
+
+    def test_identifiers_addresses_and_uuid_spelling(self):
+        for field in ("merchantKeyId", "invoiceId"):
+            self.assertEqual("A_-09" * 25, decode_invoice(self.changed(field, "A_-09" * 25))[field])
+            for invalid in ("", "x" * 129, "a.b", "a b", "é", 1):
+                with self.subTest(field=field, invalid=invalid), self.assertRaises(InvoiceError):
+                    decode_invoice(self.changed(field, invalid))
+        for field in ("paymentContract", "customer", "quotedPayee"):
+            for invalid in ("0X" + "a" * 40, "0x" + "A" * 40, "0x" + "1" * 39, 1):
+                with self.subTest(field=field), self.assertRaises(InvoiceError):
+                    decode_invoice(self.changed(field, invalid))
+        for invalid in ("00000000-0000-ABCD-8000-000000000001", "0" * 32, "{" + "0" * 36 + "}"):
+            with self.assertRaises(InvoiceError):
+                decode_invoice(self.changed("merchantId", invalid))
+        # Representation is independent of UUID-version/enrollment policy.
+        self.assertEqual(
+            "00000000-0000-0000-0000-000000000000",
+            decode_invoice(self.changed("merchantId", "00000000-0000-0000-0000-000000000000"))["merchantId"],
+        )
+
+    def test_product_objects_are_required_but_their_schema_is_merchant_owned(self):
+        for field in ("beneficiary", "serviceTerms"):
+            self.assertEqual({}, decode_invoice(self.changed(field, {}))[field])
+            for invalid in ([], "x", 1, True):
+                with self.subTest(field=field), self.assertRaises(InvoiceError):
+                    decode_invoice(self.changed(field, invalid))
+
+    def test_duplicate_decoded_names_are_rejected_at_every_depth(self):
+        for raw in (
+            self.raw[:-1] + b',"amount":"5"}',
+            self.raw[:-1] + b',"\\u0061mount":"5"}',
+            self.raw.replace(b'"fixtureOnly":true', b'"fixtureOnly":true,"fixtureOnly":false'),
+            self.raw.replace(b'"fixtureOnly":true', b'"nested":[{"x":1,"\\u0078":2}]'),
+        ):
+            with self.assertRaises(InvoiceError):
+                decode_invoice(raw)
+
+    def test_json_utf8_and_surrogates_are_strict(self):
+        for raw in (
+            b"\xef\xbb\xbf" + self.raw,
+            b"\xff",
+            self.raw + b"{}",
+            self.raw[:-1],
+            self.raw.replace(b'"fixtureOnly":true', b'"x":"\\ud800"'),
+            self.raw.replace(b'"fixtureOnly":true', b'"\\udfff":1'),
+            self.raw.replace(b'"fixtureOnly":true', b'"x":"\x01"'),
+            self.raw.replace(b'"fixtureOnly":true', b'"x":NaN'),
+            self.raw.replace(b'"fixtureOnly":true', b'"x":Infinity'),
+            self.raw.replace(b'"fixtureOnly":true', b'"x":-Infinity'),
+        ):
+            with self.subTest(raw=raw[-30:]), self.assertRaises(InvoiceError):
+                decode_invoice(raw)
+        valid = self.raw.replace(b'"fixtureOnly":true', b'"x":"\\ud801\\udc00"')
+        self.assertEqual("𐐀", decode_invoice(valid)["serviceTerms"]["servicePolicy"]["x"])
+
+    def test_container_depth_counts_root_and_both_kinds(self):
+        for depth in (16, 17, 1500):
+            # root/serviceTerms are two containers; the leaf is scalar.
+            nested = b"[" * (depth - 2) + b"0" + b"]" * (depth - 2)
+            fields = json.loads(self.raw)
+            fields["serviceTerms"] = {}
+            raw = (
+                json.dumps(fields, separators=(",", ":"))
+                .encode()
+                .replace(b'"serviceTerms":{}', b'"serviceTerms":{"x":' + nested + b"}")
+            )
+            if depth == 16:
+                self.assertEqual(raw, self.verify(sign_invoice(raw, self.key, domain=self.domain)))
+            else:
+                with self.assertRaises(InvoiceError):
+                    decode_invoice(raw)
+
+    def test_byte_limit_counts_utf8_and_excludes_prefix(self):
+        fields = json.loads(self.raw)
+        fields["serviceTerms"] = {"text": "é"}
+        raw = encode_invoice(fields)
+        padded = raw + b" " * (16384 - len(raw))
+        envelope = sign_invoice(padded, self.key, domain=self.domain)
+        self.assertEqual(21963, len(envelope))
+        self.assertEqual(padded, self.verify(envelope))
+        with self.assertRaises(InvoiceError):
+            decode_invoice(padded + b" ")
+        fields["serviceTerms"] = {"text": "é" * 8192}
+        with self.assertRaises(InvoiceError):
+            encode_invoice(fields)
+
+    def test_nested_numbers_are_lossless_and_reencodable(self):
+        tokens = ["9007199254740993", "0.12345678901234567890123456789", "1e999999999999999999999", "-0", "9" * 5000]
+        raw = self.raw.replace(b'"fixtureOnly":true', b'"numbers":[' + ",".join(tokens).encode() + b"]")
+        fields = decode_invoice(raw)
+        self.assertEqual([JsonNumber(token) for token in tokens], fields["serviceTerms"]["servicePolicy"]["numbers"])
+        self.assertEqual(raw, encode_invoice(fields))
+
+    def test_encoder_rejects_coercions_cycles_and_non_json_values(self):
+        for value in ({1: "wrong key"}, {"x": float("inf")}, {"x": 0.5}, {"x": object()}, {"x": "\ud800"}):
+            fields = json.loads(self.raw)
+            fields["serviceTerms"] = value
+            with self.assertRaises(InvoiceError):
+                encode_invoice(fields)
+        cycle = []
+        cycle.append(cycle)
+        fields["serviceTerms"] = {"cycle": cycle}
+        with self.assertRaises(InvoiceError):
+            encode_invoice(fields)
+        for token in ("NaN", "01", "1 2", "", "\u0661"):
+            with self.assertRaises(InvoiceError):
+                JsonNumber(token)
+
+    def test_signer_rejects_invalid_document_before_issuing_signature(self):
+        with self.assertRaises(InvoiceError):
+            sign_invoice(self.changed("amount", "0"), self.key, domain=self.domain)
+        with self.assertRaises(TypeError):
+            sign_invoice(self.raw, self.key.public_key(), domain=self.domain)
+        for value in (self.raw.decode(), bytearray(self.raw), None):
+            with self.assertRaises(TypeError):
+                decode_invoice(value)
