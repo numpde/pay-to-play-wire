@@ -44,16 +44,21 @@ scratch=$(mktemp -d "$repository_root/.work/publication.XXXXXXXX")
 mapfile -t push_urls < <(git remote get-url --push --all origin)
 [[ ${#push_urls[@]} == 1 ]] || fail 'Cannot publish: origin must have exactly one push URL.'
 readonly push_url=${push_urls[0]}
+case "$push_url" in
+    git@github.com:*|https://github.com/*|ssh://git@github.com/*) ;;
+    *) fail 'Cannot publish: origin must use a github.com push URL without embedded credentials.' ;;
+esac
 native 'GitHub repository inspection' 30 gh repo view "$push_url" --json nameWithOwner --jq .nameWithOwner > "$scratch/repository"
 repository=$(cat "$scratch/repository")
 readonly repository
 [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail 'Cannot publish: GitHub returned an invalid repository identity.'
+readonly repository_url=https://github.com/$repository
 
 # Preserve the response privately and distinguish absence from authentication,
 # transport and server failures. An uncertain external write is never retried.
 resource_exists() {
     local endpoint=$1 response=$2 status=0
-    native 'GitHub resource inspection' 30 gh api --include "$endpoint" > "$response" 2> "$response.stderr" || status=$?
+    native 'GitHub resource inspection' 30 gh api --hostname github.com --include "$endpoint" > "$response" 2> "$response.stderr" || status=$?
     if [[ "$status" == 0 ]]; then return 0; fi
     if [[ "$status" == 1 ]] && head -n 1 "$response" | tr -d '\r' | grep -Eq '^HTTP/[0-9.]+ 404( |$)'; then return 1; fi
     fail "Cannot inspect GitHub resource $endpoint (status $status); inspect the retained response before retrying."
@@ -97,31 +102,31 @@ if [[ "$action" == publish/release ]]; then
         "$commit" "$wheel_url" "$wheel_hash" > "$scratch/release-notes.md"
     if ! git show-ref --verify --quiet "refs/tags/$tag"; then git tag -a "$tag" "$commit" -m "Release $version"; fi
     native 'release tag push' 120 git push "$push_url" "refs/tags/$tag:refs/tags/$tag"
-    native 'draft release creation' 120 gh release create "$tag" --repo "$repository" --verify-tag --draft --title "$version" \
+    native 'draft release creation' 120 gh release create "$tag" --repo "$repository_url" --verify-tag --draft --title "$version" \
         --notes-file "$scratch/release-notes.md" "$artifacts/$wheel" "$artifacts/$sdist" "$artifacts/sha256.json" \
         "$scratch/release-build.log" "$scratch/release-test.log"
-    native 'uploaded release acquisition' 120 gh release download "$tag" --repo "$repository" --dir "$scratch/downloaded"
+    native 'uploaded release acquisition' 120 gh release download "$tag" --repo "$repository_url" --dir "$scratch/downloaded"
     for name in "$wheel" "$sdist" sha256.json; do
         [[ $(sha256sum "$scratch/downloaded/$name" | cut -d ' ' -f1) == "${qualified[$name]}" ]] || fail 'Cannot publish release: downloaded bytes differ from the qualified artifact; the draft remains for inspection.'
     done
     for name in release-build.log release-test.log; do
         cmp -- "$scratch/$name" "$scratch/downloaded/$name" || fail 'Cannot publish release: downloaded log bytes differ; the draft remains for inspection.'
     done
-    native 'verified release publication' 30 gh release edit "$tag" --repo "$repository" --draft=false
+    native 'verified release publication' 30 gh release edit "$tag" --repo "$repository_url" --draft=false
     printf 'Published https://github.com/%s/releases/tag/%s\n' "$repository" "$tag"
 else
     [[ $(git branch --show-current) == main ]] || fail 'Cannot publish Pages: check out the main branch first.'
     native 'Pages source push' 120 git push "$push_url" "$commit:refs/heads/main"
     if resource_exists "repos/$repository/pages" "$scratch/existing-pages"; then method=PUT; else method=POST; fi
-    native 'Pages source configuration' 30 gh api --method "$method" "repos/$repository/pages" \
+    native 'Pages source configuration' 30 gh api --hostname github.com --method "$method" "repos/$repository/pages" \
         -f 'source[branch]=main' -f 'source[path]=/docs' -f build_type=legacy > "$scratch/pages-configuration.json"
-    native 'Pages build request' 30 gh api --method POST "repos/$repository/pages/builds" > "$scratch/pages-build.json"
-    native 'Pages URL inspection' 30 gh api "repos/$repository/pages" --jq .html_url > "$scratch/pages-url"
+    native 'Pages build request' 30 gh api --hostname github.com --method POST "repos/$repository/pages/builds" > "$scratch/pages-build.json"
+    native 'Pages URL inspection' 30 gh api --hostname github.com "repos/$repository/pages" --jq .html_url > "$scratch/pages-url"
     readonly page_url=$(cat "$scratch/pages-url")
     [[ "$page_url" == https://* ]] || fail 'Cannot verify Pages: GitHub did not return an HTTPS site URL.'
     readonly deadline=$((SECONDS + 600))
     while (( SECONDS < deadline )); do
-        native 'Pages build inspection' 30 gh api "repos/$repository/pages/builds/latest" \
+        native 'Pages build inspection' 30 gh api --hostname github.com "repos/$repository/pages/builds/latest" \
             --jq '.commit + " " + .status' > "$scratch/pages-status"
         read -r built_commit status < "$scratch/pages-status"
         if [[ "$built_commit" == "$commit" && "$status" == errored ]]; then

@@ -115,3 +115,7 @@ The publisher captures origin's sole resolved push URL, inspects that same
 GitHub repository and uses the captured URL for writes. Pages pushes the captured
 source commit and verifies its revision marker in the live HTML.
 The existing v0.1.0 tag and release assets are unchanged by these workflow edits.
+The Pages target completed successfully for source 2968e8f05cd736655fda5c0d8ea5cb50944177d0
+and verified HTTP 200 plus the exact live source-revision meta element. The
+release target has received source review; a new release has not been created
+through that target. The next real release must use its matching package version.
