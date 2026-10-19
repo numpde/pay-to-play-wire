@@ -49,6 +49,7 @@ class InvoiceLauncherTests(unittest.TestCase):
         shutil.copytree("src", self.root / "src")
         shutil.copytree("tests", self.root / "tests")
         shutil.copytree("docs", self.root / "docs")
+        shutil.copytree("notes", self.root / "notes")
         self.record = self.root / ".work/invoice/admission"
         self.record.write_text(
             IMAGE_ID
@@ -128,8 +129,38 @@ esac
         self.assertTrue(mounts)
         self.assertTrue(all(mount.endswith(",readonly") for mount in mounts))
         self.assertTrue(all("docker.sock" not in mount and ".git" not in mount for mount in mounts))
+        self.assertFalse(any("dst=/workspace/notes," in mount for mount in mounts))
         self.assertIn("discover", args)
         self.assertIn("tests/invoice", args)
+
+    def test_repository_checks_receive_readonly_release_notes(self):
+        result = self.run_launcher("test/repository")
+        self.assertEqual(0, result.returncode, msg=result.stderr)
+        args = self.trace.read_bytes().decode().split("\0")[:-1]
+        mounts = [args[index + 1] for index, value in enumerate(args) if value == "--mount"]
+        self.assertEqual(
+            [f"type=bind,src={self.root}/notes,dst=/workspace/notes,readonly"],
+            [mount for mount in mounts if "dst=/workspace/notes," in mount],
+        )
+
+    def test_missing_or_symlinked_notes_are_rejected_before_engine_dispatch(self):
+        notes = self.root / "notes"
+        outside = self.root / "outside-notes"
+        notes.rename(outside)
+        result = self.run_launcher("test/repository")
+        self.assertEqual(2, result.returncode, msg=result.stderr)
+        self.assertFalse(self.trace.exists())
+        notes.symlink_to(outside, target_is_directory=True)
+        result = self.run_launcher("test/repository")
+        self.assertEqual(2, result.returncode, msg=result.stderr)
+        self.assertFalse(self.trace.exists())
+        notes.unlink()
+        outside.rename(notes)
+        (notes / "999_release_v9.2.3.md").symlink_to(self.root / "README.md")
+        result = self.run_launcher("test/repository")
+        self.assertEqual(2, result.returncode, msg=result.stderr)
+        self.assertIn("symlinked source below notes", result.stderr)
+        self.assertFalse(self.trace.exists())
 
     def test_changed_dependency_lock_is_rejected_before_engine_dispatch(self):
         path = self.root / "requirements/invoice.lock"

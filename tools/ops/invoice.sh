@@ -40,9 +40,11 @@ for path in containers containers/invoice requirements tools tools/ops tools/dep
 inputs=(containers/invoice/Dockerfile containers/invoice/Dockerfile.dockerignore requirements/invoice.lock requirements/make.json
     tools/dependencies/wheels.py tools/ops/container_guard.py)
 for path in "${inputs[@]}" tools/ops/docker_client.sh tools/ops/inference_native.sh; do require_file "$path"; done
+source_directories=(src tests tools containers requirements docs)
+if [[ "$action" == test/repository ]]; then source_directories+=(notes); fi
 case "$action" in
     package/build|test/repository|test/invoice|test/invoice/*|build/verify|lint/check)
-        for path in src tests tools containers requirements docs; do
+        for path in "${source_directories[@]}"; do
             require_directory "$path"
             if [[ -n $(find "$path" -type l -print -quit) ]]; then printf 'Cannot mount symlinked source below %s.\n' "$path" >&2; exit 2; fi
         done
@@ -262,7 +264,7 @@ case "$action" in
             "${mounts[@]}" "$image_id" python3 -B -m tools.ops.package check
         ;;
     *)
-        for path in src tests tools containers requirements docs; do
+        for path in "${source_directories[@]}"; do
             mounts+=(--mount "type=bind,src=$repository_root/$path,dst=/workspace/$path,readonly")
         done
         for path in AGENTS.md README.md Makefile pyproject.toml MANIFEST.in ruff.toml; do

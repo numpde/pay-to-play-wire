@@ -49,6 +49,11 @@ make test/invoice/integration
 make test/package
 ```
 
+`test/repository` discovers `notes/*_release_v*.md` and rejects manual wrapping of
+paragraphs and list items, plus explicit Markdown line breaks. Keep each paragraph
+or list item on one source line; use blank lines between paragraphs. Headings,
+new list items and fenced code blocks retain their structural line breaks.
+
 `test/package` consumes previously built artifacts without mounting source. It
 captures and verifies the artifact bytes, rebuilds a wheel from the sdist offline,
 and checks both wheels in a fresh contained environment. The checks cover import
