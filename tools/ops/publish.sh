@@ -116,11 +116,22 @@ if [[ "$action" == publish/release ]]; then
     printf 'Published https://github.com/%s/releases/tag/%s\n' "$repository" "$tag"
 else
     [[ $(git branch --show-current) == main ]] || fail 'Cannot publish Pages: check out the main branch first.'
+    native 'previous Pages source inspection' 30 git ls-remote --refs "$push_url" refs/heads/main > "$scratch/previous-main"
+    previous_commit=$(cut -f1 "$scratch/previous-main")
     native 'Pages source push' 120 git push "$push_url" "$commit:refs/heads/main"
-    if resource_exists "repos/$repository/pages" "$scratch/existing-pages"; then method=PUT; else method=POST; fi
-    native 'Pages source configuration' 30 gh api --hostname github.com --method "$method" "repos/$repository/pages" \
-        -f 'source[branch]=main' -f 'source[path]=/docs' -f build_type=legacy > "$scratch/pages-configuration.json"
-    native 'Pages build request' 30 gh api --hostname github.com --method POST "repos/$repository/pages/builds" > "$scratch/pages-build.json"
+    method=POST
+    if resource_exists "repos/$repository/pages" "$scratch/existing-pages"; then
+        native 'Pages source configuration inspection' 30 gh api --hostname github.com "repos/$repository/pages" \
+            --jq '[.source.branch, .source.path, .build_type] | join(" ")' > "$scratch/pages-source"
+        if [[ $(cat "$scratch/pages-source") == 'main /docs legacy' ]]; then method=; else method=PUT; fi
+    fi
+    if [[ -n "$method" ]]; then
+        native 'Pages source configuration' 30 gh api --hostname github.com --method "$method" "repos/$repository/pages" \
+            -f 'source[branch]=main' -f 'source[path]=/docs' -f build_type=legacy > "$scratch/pages-configuration.json"
+    elif [[ "$previous_commit" == "$commit" ]]; then
+        # Source pushes and configuration updates already request a build.
+        native 'Pages build request' 30 gh api --hostname github.com --method POST "repos/$repository/pages/builds" > "$scratch/pages-build.json"
+    fi
     native 'Pages URL inspection' 30 gh api --hostname github.com "repos/$repository/pages" --jq .html_url > "$scratch/pages-url"
     readonly page_url=$(cat "$scratch/pages-url")
     [[ "$page_url" == https://* ]] || fail 'Cannot verify Pages: GitHub did not return an HTTPS site URL.'
@@ -129,9 +140,8 @@ else
         native 'Pages build inspection' 30 gh api --hostname github.com "repos/$repository/pages/builds/latest" \
             --jq '.commit + " " + .status' > "$scratch/pages-status"
         read -r built_commit status < "$scratch/pages-status"
-        if [[ "$built_commit" == "$commit" && "$status" == errored ]]; then
-            fail 'Cannot publish Pages: the requested source build failed; inspect its GitHub build logs.'
-        fi
+        # latest can still describe a previous failed build while a newly
+        # requested build is queued, so its failure cannot decide this outcome.
         if [[ "$built_commit" == "$commit" && "$status" == built ]]; then
             native 'live Pages acquisition' 40 curl --silent --show-error --location --connect-timeout 10 --max-time 30 \
                 --output "$scratch/page.html" --write-out '%{http_code}' "$page_url" > "$scratch/page-status"

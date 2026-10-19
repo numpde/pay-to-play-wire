@@ -119,3 +119,8 @@ The Pages target completed successfully for source 2968e8f05cd736655fda5c0d8ea5c
 and verified HTTP 200 plus the exact live source-revision meta element. The
 release target has received source review; a new release has not been created
 through that target. The next real release must use its matching package version.
+The destination-bound followup also published and verified source 9cda3f05235b213da249161af0fb19dcf9e5efab.
+The run list exposed duplicate builds from a source push plus an explicit request.
+The publisher now requests a build only when source and configuration were both
+unchanged. It waits through a previous failed build receipt while a new request
+is still queued; only the live matching revision establishes publication.

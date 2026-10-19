@@ -88,8 +88,10 @@ The tag is a required literal Make command-line argument; ambient `TAG` is ignor
 
 `publish/pages` requires the `main` branch. It pushes `HEAD` to `origin/main`,
 configures Pages for `main/docs`, requests a build, then checks the live HTTPS
-page for the exact deployed source revision. It waits at most ten minutes for
-publication. Both commands run Git/GitHub orchestration on the host with the
+page for the exact deployed source revision. It polls with a ten minute deadline;
+individual API/HTTP calls have their own bounds. Source/configuration changes
+trigger their own build; an unchanged publication requests a rebuild explicitly.
+Both commands run Git/GitHub orchestration on the host with the
 operator's existing authentication; credentials never enter package containers.
 
 Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;
