@@ -68,3 +68,21 @@ Historical vectors contain synthetic public identities and example.invalid
 addresses. This review does not assert an exhaustive security audit.
 Consumer source reviews found no remaining API mismatch. Consumer runtime and
 deployment proof remain separate; neither was established by these package runs.
+
+Publication, 2026-10-19
+-----------------------
+Created numpde/signed-invoice as a private GitHub repository and pushed main.
+Annotated tag v0.1.0 points to the qualified source revision 218a6be above.
+Release: https://github.com/numpde/signed-invoice/releases/tag/v0.1.0
+The release includes the wheel, sdist, sha256.json and both qualification logs.
+Downloaded all five assets through authenticated GitHub acquisition; every
+SHA-256 matched the recorded local file, and cmp confirmed wheel/sdist equality.
+Both consumer owners received the exact tag, source commit, wheel URL and hash.
+Pay-to-Play explicitly reports that consumer adoption/runtime qualification is
+not yet part of its current slice. Mail's prepared integration awaits the
+installable release inputs and its own contained runtime checks.
+
+Pages configuration on main selects the built-in Primer theme for docs/index.md.
+This documentation-only change does not alter the immutable v0.1.0 source or
+release assets. Repository visibility and live Pages publication require the
+user's separate confirmation of the requested public transition.

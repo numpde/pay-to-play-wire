@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # signed-invoice
 
 `signed-invoice` is a small shared Python >=3.12 library for merchant invoices.
