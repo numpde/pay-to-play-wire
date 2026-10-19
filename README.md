@@ -63,7 +63,7 @@ evidence; confirm owned-process/container cleanup before retrying.
 
 GitHub tags name releases. Consumers pin the source commit and verify the actual
 wheel hash; a tag name alone does not make bytes immutable. Release assets allow
-authenticated acquisition followed by an offline, hash-locked installation.
+explicit acquisition followed by an offline, hash-locked installation.
 Keep acquisition credentials out of dependency images, layers and runtime.
 
 Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;

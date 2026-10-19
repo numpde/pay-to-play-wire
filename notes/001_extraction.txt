@@ -83,6 +83,20 @@ not yet part of its current slice. Mail's prepared integration awaits the
 installable release inputs and its own contained runtime checks.
 
 Pages configuration on main selects the built-in Primer theme for docs/index.md.
-This documentation-only change does not alter the immutable v0.1.0 source or
-release assets. Repository visibility and live Pages publication require the
-user's separate confirmation of the requested public transition.
+Documentation-only changes do not alter the immutable v0.1.0 source or assets.
+
+Public review and hosting, 2026-10-19
+------------------------------------
+Read all three historical notes versions and all commit/tag metadata before the
+public transition. Scanned every reachable source revision and downloaded release
+logs for credential patterns, personal filesystem paths and credential-bearing
+URLs; no matches. Reviewed fixture identities/endpoints as synthetic and package
+inventories as the declared library/docs only. No sensitive information was found
+in the reviewed history or published assets; no history rewrite was needed.
+
+The repository is public. Anonymous HTTPS download of the release wheel matched
+the qualified SHA-256 and cmp verified byte equality with the original artifact.
+Pages publishes main/docs at https://numpde.github.io/signed-invoice/ .
+The initial deployment built and deployed successfully; the live URL returned
+HTTP 200 with the rendered API guide and the expected stylesheet URL.
+Consumer owners received the public artifact coordinates and unchanged hash.
