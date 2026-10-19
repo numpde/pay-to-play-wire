@@ -32,3 +32,39 @@ Mail retains product projection, consent/reservation, storage, runtime key
 selection and fulfillment. P2P retains ledger and admission. Neither consumer
 has been changed by this repository. Distribution/adoption and fresh consumer
 runtime evidence must be recorded separately from local codec validation.
+
+Release qualification, 2026-10-19
+--------------------------------
+Clean source revision: 218a6be93f8c00ad9838c423b60353981decf1fc.
+Source tree: c5f21e69b2c0fde6277d5a1722536e881c383a45.
+Tool image: sha256:9067f16a77e9ba270df5e0f7b55d29d5b5cb9d40bcff86bcd1a330489621a397.
+Platform: Linux amd64, Python 3.12.12. Runtime dependency: cryptography==50.0.2.
+
+make package/build and make test completed with exit status 0 from that clean
+revision. All project execution was in the maintained offline containers.
+Ruff passed; 29 repository checks and 46 invoice tests passed. Repository checks
+include live kernel containment, real Make variable handling, native child
+retirement under blocked output, captured build inputs during live source drift,
+exact observed image metadata rejection, and current dependency-byte validation.
+The original wheel and a wheel rebuilt offline from the sdist both passed fresh
+source-free installation, import-origin/payload/metadata/resource checks, pip
+check, scalar validation, exact vector hashes and sign/verify round trips.
+
+Release wheel signed_invoice-0.1.0-py3-none-any.whl SHA-256:
+82247ada0220f3401a7991cdd4bbb65defe3a57467ca1210f65a23855395dafb
+Release sdist signed_invoice-0.1.0.tar.gz SHA-256:
+3aad23e08fc16af5e18f5657333cfe96a483c6769ac0b3de9ae7beb734cd870c
+sha256.json SHA-256:
+376214cb5ae9c69af006753300267c0a79100f3e1bd6bf808beb0b08305c764e
+Local retained .work/validation/release-build.log SHA-256:
+edfcc027da0e72bfa73b5b9266fb818712f69ca7d641a56d7ee74119842c8d99
+Local retained .work/validation/release-test.log SHA-256:
+7a661b4fb47cee7b4648aa5cb46cf1d654201d4f03383d0d6cd468af0b6bdee6
+
+The tracked source inventory and declared wheel/sdist payloads were reviewed.
+Private checkout state and acquired dependencies are excluded; tracked source
+scans found no private-key, GitHub-token, AWS-key or Slack-token patterns.
+Historical vectors contain synthetic public identities and example.invalid
+addresses. This review does not assert an exhaustive security audit.
+Consumer source reviews found no remaining API mismatch. Consumer runtime and
+deployment proof remain separate; neither was established by these package runs.
