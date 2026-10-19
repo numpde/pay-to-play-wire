@@ -171,3 +171,22 @@ and sdist inventories before publication. The affected naming condition is
 absent from this qualified build; the build-tool pin is retained.
 Maintainer advisory:
 https://github.com/pypa/setuptools/security/advisories/GHSA-h35f-9h28-mq5c
+
+0.1.1 publication, 2026-10-19
+----------------------------
+Published annotated tag v0.1.1 from clean source
+74339b5fc243760ae39fbbc08ae88eafe449309a through make publish/release.
+Qualification passed Ruff, 33 repository checks, 46 invoice tests and both
+source-free installed-wheel checks. The publisher downloaded and verified all
+five draft assets before publication. Anonymous wheel acquisition then matched
+the qualified hash and original artifact bytes.
+Wheel SHA-256:
+08d1635413d0ceeb6d3985b10b037cac5589c6e54e6c2dc1dd50d931e910a38a
+Sdist SHA-256:
+f0e25d202e495c751e5522dae8e0f0885f547954b463cda2bb48176cdf1c077f
+Release test log SHA-256:
+c01e50adf78105931070ee4878219de249b7b62ed8ff80606872017e49b3cefb
+Release: https://github.com/numpde/signed-invoice/releases/tag/v0.1.1
+The authored release note is retained in notes/002_release_v0.1.1.md; its exact
+bytes were compared with the published GitHub body. Pages installation guidance
+now selects this release. The earlier 0.1.0 assets and tag were preserved.
