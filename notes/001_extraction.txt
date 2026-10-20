@@ -190,3 +190,20 @@ Release: https://github.com/numpde/signed-invoice/releases/tag/v0.1.1
 The authored release note is retained in notes/003_release_v0.1.1.md; its exact
 bytes were compared with the published GitHub body. Pages installation guidance
 now selects this release. The earlier 0.1.0 assets and tag were preserved.
+
+Check scope review, 2026-10-20
+------------------------------
+Reviewed all 43 repository checks against current implementation owners:
+dependency-byte verification, container launcher admission and grants, native
+child retirement, publication, release-note formatting and live containment.
+These checks exercise this repository's workflows; no scientific/model/provider
+obligations remain in the maintained repository lane.
+
+Removed three donor application module names from the installed-package smoke
+check. Exact wheel/sdist inventories already reject every unexpected package,
+including those names. Kept the tools/tests import-absence checks because they
+verify this repository's own development helpers are unavailable to the fresh
+installed runtime. Protocol vectors remain unchanged interoperability evidence.
+make test passed all 43 repository checks, 46 invoice tests and fresh installs
+of both existing 0.1.0 wheel candidates. Installed-package qualification also
+passed after clarifying the development-module name and failure diagnostic.

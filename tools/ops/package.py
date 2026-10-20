@@ -182,9 +182,9 @@ project = json.loads(sys.argv[1])
 assert distribution.version == project['version']
 assert distribution.requires == project['dependencies']
 assert distribution.metadata['Requires-Python'] == project['requires-python']
-assert Path(signed_invoice.__file__).resolve().is_relative_to(Path(__import__('sys').prefix))
-for forbidden in ('tools', 'tests', 'p2p_invoice', 'agent_mail', 'agent_mail_p2p'):
-    assert importlib.util.find_spec(forbidden) is None, forbidden
+assert Path(signed_invoice.__file__).resolve().is_relative_to(Path(sys.prefix))
+for development_module in ('tools', 'tests'):
+    assert importlib.util.find_spec(development_module) is None, f"Installed runtime can import development module {development_module!r}."
 vectors = json.loads(importlib.resources.files('signed_invoice').joinpath('vectors/invoice.json').read_bytes())
 domain = vectors['invoicePrefixUtf8'].encode()
 key = Ed25519PrivateKey.generate()
