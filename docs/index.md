@@ -1,147 +1,81 @@
 ---
 layout: default
+title: signed-invoice
 ---
 
 # signed-invoice
 
-`signed-invoice` is a small shared Python >=3.12 library for merchant invoices.
-It implements strict encoding and decoding, exact-byte SHA-256 hashes,
-Ed25519 signatures, signed envelopes and pure payment-route comparison.
+The Python package owns the five-field invoice grammar, strict JSON, exact-byte hashing and Ed25519 signatures and envelopes. Applications own provider enrollment and authorization, product schemas, payment routes, admission, persistence, collection and fulfillment.
 
-## Install
+The main branch prepares the breaking 0.2.0 format described here. Published 0.1.x releases retain their original version-2 grammar and exact assets. Acquire the intended release explicitly and verify its immutable wheel hash before offline installation; switching packages does not migrate stored offers or consumer policy.
 
-Use the tested wheel from the tagged GitHub release as an application dependency:
+## Invoice document
 
-```text
-signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.1.2/signed_invoice-0.1.2-py3-none-any.whl#sha256=a378138da68b70502bdc9630e21b9b3a3431678458f86851d3a1844bd5b64dee
+Exactly these five members are required:
+
+```json
+{
+  "provider": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+  "payment": {"asset": "eip155:1/slip44:60", "amount": "1000000000000000"},
+  "bestBefore": 2000003600,
+  "beneficiary": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "service": {"address": "fixture@mail.example.invalid"}
+}
 ```
 
-The [release](https://github.com/numpde/signed-invoice/releases/tag/v0.1.2)
-includes the source distribution, hashes and validation logs. Acquire dependencies
-explicitly, verify their hashes and install offline using the consuming
-application's maintained workflow. The runtime dependency is `cryptography==50.0.2`.
+This is a synthetic example, not an enrolled provider or commercial offer. The provider and beneficiary are independently selected public keys. Both use 43 canonical unpadded base64url characters encoding exactly 32 raw Ed25519 public bytes. Padding, another alphabet, nonzero unused padding bits and JWK objects are rejected. The trusted profile and key APIs fix the algorithm as Ed25519; there is no algorithm negotiation or key alias.
 
-## Signing and verification
+`payment` contains exactly `asset` and `amount`. The asset accepts generic [CAIP-19](https://standards.chainagnostic.org/CAIPs/caip-19) asset-type or asset-ID syntax, including optional token IDs, with the [CAIP-2](https://standards.chainagnostic.org/CAIPs/caip-2) chain component. Spelling and case are preserved. This syntactic check supplies no namespace-specific canonicalization, payable-asset support, denomination, token behavior or route qualification.
+
+`amount` is a positive base-unit decimal string matching `[1-9][0-9]*`. No integer conversion or EVM bound is imposed. Its maximum of 16384 digits derives from the document resource limit; the complete encoded document must still fit within 16384 bytes. A payment adapter must enforce its narrower bounds and supported assets.
+
+`bestBefore` is a canonical JSON integer token in `0..9007199254740991` Unix seconds. Negative zero, fractions, exponents, booleans and strings are rejected. The codec consults no clock: the provider decides whether it can accept and fulfill an offer, including one received late. This field supplies no hard redemption deadline or reservation-release authority.
+
+`service` accepts any JSON value: object, array, string, number, boolean or null. The provider owns its meaning and schema. Every field participates in the hash and signature. No document version, invoice ID, merchant alias, payer, channel, settlement contract or redemption deadline is embedded. The caller's trusted signing context selects this grammar; there is no old-grammar fallback.
+
+## Encoding and verification
 
 ```python
-from signed_invoice import (
-    decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice,
-)
+from signed_invoice import encode_invoice, sign_invoice, verify_invoice, invoice_hash
 
+# fields is the five-field document above. private_key is the provider's
+# cryptography Ed25519PrivateKey. trusted_key comes from application enrollment.
+domain = b"P2P-INVOICE-4\n"
 raw = encode_invoice(fields)
-# Persist these original bytes and the selected key binding before signing.
-envelope = sign_invoice(raw, merchant_private_key, domain=trusted_signing_domain)
-verified = verify_invoice(
-    envelope,
-    domain=trusted_signing_domain,
-    merchant_id=trusted_merchant_id,
-    merchant_key_id=trusted_key_id,
-    public_key=trusted_public_key,
-)
-assert verified == raw
-digest_hex = invoice_hash(verified, domain=trusted_signing_domain)
-decoded = decode_invoice(verified)
+envelope = sign_invoice(raw, private_key, domain=domain)
+authenticated = verify_invoice(envelope, domain=domain, public_key=trusted_key)
+digest_hex = invoice_hash(authenticated, domain=domain)
 ```
 
-The application supplies its trusted signing domain as required nonempty bytes.
-The library adds no delimiter and derives no domain from invoice contents.
-Hashing computes SHA-256(domain + original JSON bytes).
-Ordinary Ed25519 signs that preimage directly, without hashing it first.
-Verification never reconstructs JSON. Retain original bytes for retries,
-storage, hashing and retransmission; re-encoding fields may change the hash.
+The reference consumer profile uses the exact 14 bytes `50 32 50 2d 49 4e 56 4f 49 43 45 2d 34 0a` (`P2P-INVOICE-4` followed by LF). Every cryptographic API requires caller-supplied nonempty `domain` bytes. The library has no default domain, adds no delimiter and never infers trusted context from an invoice. Old candidate profiles must not be used to interpret the new grammar.
 
-## Wire format
+The signing message is `domain + raw`. Invoice identity is `0x` plus lowercase SHA-256 of that message. Ordinary Ed25519 signs the full message directly, not its hash. Whitespace, member order, Unicode spelling and escapes are never reconstructed for verification. Retain original invoice bytes and signatures for storage, replay and retransmission. Identical bytes under the same domain have the same identity; issuance recovery and single acceptance or fulfillment remain server responsibilities.
 
-The document has exactly 15 required members, including the JSON integer
-`version: 2` and the explicit `asset`. Amounts are positive uint256 decimal
-strings in integer base units. Assets use
-canonical lowercase EVM asset addresses, with `NATIVE_ASSET` identifying native
-assets using ERC-7528. Zero is rejected. Chain, contract and asset are distinct
-parts of the denomination; a contract deployment has one immutable asset.
+`verify_invoice(envelope, *, domain, public_key)` requires a caller-trusted `cryptography` Ed25519 public-key object. It also requires the document's decoded provider bytes to equal that exact key. A valid signature by a different trusted key is rejected. Signing similarly rejects a private key that does not match the named provider. A document-supplied key cannot establish its own trust.
 
-| Required members | Wire value |
-| --- | --- |
-| `version` | JSON integer `2` |
-| `merchantId` | Lowercase hyphenated UUID string |
-| `merchantKeyId`, `invoiceId` | 1–128 ASCII letters, digits, underscores or hyphens |
-| `chainId`, `channelId` | Canonical uint256 decimal strings |
-| `paymentContract`, `customer`, `quotedPayee` | Lowercase 20-byte EVM address strings |
-| `asset` | Nonzero lowercase EVM address string, including `NATIVE_ASSET` |
-| `amount` | Positive uint256 decimal string |
-| `acceptBy`, `redeemBy` | JSON integers in 0 through 2^53−1, with `acceptBy < redeemBy` |
-| `beneficiary`, `serviceTerms` | JSON objects with merchant-owned schemas |
+`encode_invoice(dict)` serializes once in insertion order and validates the result. `decode_invoice(bytes)` returns fresh fields with `bestBefore` as a Python integer and every service number as a lossless `JsonNumber(token)`. Use `JsonNumber` to encode fractions, exponents or very large numbers without rounding. Python floats are rejected. Parsing and hashing do not authenticate an offer.
 
-The codec rejects duplicate decoded member names at every depth, malformed
-UTF-8/JSON, BOMs, nonfinite numbers, unpaired surrogates, documents over 16384
-bytes and container depth over 16. Integer fields have exact lexical/range
-rules; booleans, fractions and exponents cannot replace them. Beneficiary and
-serviceTerms must be objects; their meaning belongs to the merchant.
+All documents require strict UTF-8 JSON without a BOM, duplicate decoded member names at any depth, nonfinite numbers or unpaired Unicode surrogates. The maximum document size is 16384 encoded bytes. Maximum container depth is 16, counting the root object as 1. Scalar services do not consume a container level. Lossless numbers and all service value kinds remain subject to these limits.
 
-`encode_invoice` accepts JSON dictionaries/lists/strings/bools/null, Python
-integers, and `JsonNumber(token)`. Python floats are rejected. `decode_invoice`
-returns fresh dictionaries, with version and deadlines as integers and nested
-merchant numbers as lossless `JsonNumber` values. It does not mutate input bytes.
+## Envelopes and scalar helpers
 
-## Envelopes and hashes
+`sign_invoice_detached(raw, private_key, *, domain)` returns the 64-byte signature. `encode_envelope(raw, signature)` returns compact JSON containing exactly `bytes` and `signature`, both canonical padded standard base64. `decode_envelope(envelope)` returns `(raw, signature)` after wire validation without authentication. `invoice_signing_message(raw, *, domain)` returns the validated preimage. The containing transport owns its total envelope-body limit, including whitespace.
 
-Keys are `cryptography` Ed25519 key objects. `sign_invoice_detached` returns a
-64-byte signature; `encode_envelope` encodes original bytes plus that signature.
-`decode_envelope` returns `(raw, signature)` without authenticating them.
-`invoice_signing_message` exposes the validated preimage. Hashing, signing and
-verification require the same explicit `domain`. All operations validate the
-complete document. Envelopes are original JSON bytes containing exactly
-`bytes` and `signature`, both canonical padded standard base64. The containing
-transport owns its total request-body limit.
-
-`invoice_hash` returns `0x` plus 64 lowercase hex digits. Applications needing
-raw hash bytes can decode the returned hex with `bytes.fromhex(digest_hex[2:])`. Parsing/hashing
-does not authenticate the invoice. `verify_invoice` requires an explicitly
-trusted merchant/key/public-key binding; a beneficiary key cannot supply trust.
-
-## Payment routes
-
-`validate_payment_route(raw, *, chain_id, payment_contract, asset)` requires
-an explicit asset and compares the three signed values against supplied canonical strings.
-It performs no RPC or deployment qualification. Call after signature verification
-with coherent qualified observations. Equality does not establish payment
-admission, balances, funding, collection, acceptance or fulfillment.
-
-## Scalar validation
-
-Applications can validate shared scalar facts before constructing an invoice:
+Applications can validate individual wire values before constructing an offer:
 
 | Validator | Accepted value |
 | --- | --- |
-| `require_merchant_id` | Lowercase hyphenated UUID string |
-| `require_identifier` | 1–128 ASCII letters, digits, underscores or hyphens |
-| `require_evm_address` | Lowercase 20-byte EVM address string |
-| `require_asset` | Nonzero EVM asset identifier, including `NATIVE_ASSET` |
-| `require_uint256` | Canonical unsigned decimal string; `positive=True` excludes zero |
-| `require_deadline` | Python integer in 0 through 2^53−1 |
+| `require_public_key` | Canonical unpadded base64url of 32 Ed25519 public bytes |
+| `require_asset` | Case-sensitive CAIP-19 asset type or asset ID |
+| `require_amount` | Positive canonical decimal string, at most 16384 digits |
+| `require_best_before` | Python integer in 0 through 2^53−1 |
 
-Each returns the original value without coercion and accepts an optional `name`
-for a trusted diagnostic field label. These functions check wire facts; they do
-not choose a price, establish enrollment, check current time or authorize an
-offer. The document decoder additionally checks exact JSON integer-token syntax
-and deadline ordering. Merchant-owned schemas retain their own version fields.
+Each returns its input without normalization and accepts an optional trusted diagnostic `name`. Wrong Python API argument types raise `TypeError`; malformed protocol inputs raise `InvoiceError`, a `ValueError`. The decoder maps wrong JSON field types to `InvoiceError`. Backend and key-operation failures propagate. Diagnostics do not echo document contents and are not stable machine error codes.
 
-`EVM_ADDRESS_PATTERN` and `EVM_ADDRESS_LENGTH` support schema metadata. Use the
-pattern with a maximum length of `EVM_ADDRESS_LENGTH`: a JSON Schema regex end
-anchor can otherwise match before a trailing newline. Runtime validation uses
-strict full matching. The library has no web-framework dependency.
+0.2.0 removes `validate_payment_route`, `NATIVE_ASSET`, the EVM address metadata, merchant and identifier helpers, `require_uint256` and `require_deadline`. Consumers must remove their old field access and verification arguments. P2P owns settlement-route authorization, payee and asset qualification through trusted registration and voucher context. Asset equality alone cannot qualify a route. Consumer repositories require their own adoption and runtime qualification.
 
-## Errors and interoperability
+## Interoperability and development
 
-Malformed protocol inputs raise `InvoiceError`, a `ValueError`, without echoing
-invoice contents. Wrong Python argument types raise `TypeError`. Backend errors
-propagate. Error wording is diagnostic prose, not a stable machine error code.
+The installed resource `importlib.resources.files("signed_invoice").joinpath("vectors/invoice.json")` carries authoritative synthetic exact-byte invoices, base64, hashes and Ed25519 signatures plus external payment-voucher contexts. The public test signing identity comes from RFC 8032; it must never be used for real offers. Voucher evidence is separate from invoice signatures and proves no enrollment, collection, settlement or deployment.
 
-Shared synthetic vectors are installed as package data. Consumers can read
-`importlib.resources.files("signed_invoice").joinpath("vectors/invoice.json")`.
-These preserve the original byte/hash expectations; their voucher metadata is
-interoperability context, not payment or deployment proof.
-
-[Development and operations](https://github.com/numpde/signed-invoice#development)
-are containerized and entered through `make help`.
-[Source provenance and validation records](https://github.com/numpde/signed-invoice/blob/main/notes/001_extraction.txt)
-document the selected donor practices and release checks.
+Use `make vectors/show` to print hash, base64 and signature expectations offline for manual review; it never rewrites the fixture and does not compute EIP-712 digests. [Development and release operations](https://github.com/numpde/signed-invoice#development) use the maintained container lanes through `make help`. [Design and consumer obligations](https://github.com/numpde/signed-invoice/blob/main/notes/005_invoice_design.txt) and the extraction record preserve source provenance.

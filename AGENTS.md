@@ -1,7 +1,7 @@
 # signed-invoice
 
 Own the shared invoice wire grammar, exact-byte hash/signature/envelope
-rules and pure payment-route comparison. Applications own key trust, product
+rules. Applications own payment-route qualification, key trust, product
 schemas, persistence, consent, admission, fulfillment and settlement.
 
 Copy established owners from the recorded source repositories before inventing replacements.

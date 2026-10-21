@@ -9,6 +9,8 @@ override export PUBLISH_TAG_INPUT := $(if $(filter command line,$(origin TAG)),$
 
 .PHONY: help prerequisites/check dependencies/download dependencies/check build/image build/verify package/build publish/release publish/pages test test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/package lint/check
 
+.PHONY: vectors/show
+
 help:
 	@printf '%s\n' \
 	  'prerequisites/check        Check host tools, identity and the selected Docker engine.' \
@@ -17,12 +19,13 @@ help:
 	  'build/image              Build the tool image offline from captured inputs.' \
 	  'build/verify             Verify the prepared image and live containment.' \
 	  'package/build            Build wheel and sdist offline into .work/dist.' \
+	  'vectors/show             Print exact-byte hash/signature inputs for manual vector review.' \
 	  'publish/release          Qualify and publish a GitHub release; requires TAG=vX.Y.Z.' \
 	  'publish/pages            Push main, deploy docs/ and verify the live source revision.' \
 	  'test                     Run all self-contained checks using prepared inputs.' \
 	  'test/repository          Check the actual repository workflows and containment.' \
 	  'test/invoice             Run all invoice behavior campaigns.' \
-	  'test/invoice/normative   Check valid invoices and exact asset routes.' \
+	  'test/invoice/normative   Check valid five-field invoices and exact-byte vectors.' \
 	  'test/invoice/adversarial Check malformed documents and cryptographic rejection.' \
 	  'test/invoice/integration Check detached signing and envelope composition.' \
 	  'test/package             Check installed wheel/sdist artifacts without source mounts.' \
@@ -30,7 +33,7 @@ help:
 
 test: lint/check test/repository test/invoice test/package
 
-test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/package lint/check prerequisites/check build/verify package/build:
+test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/package lint/check prerequisites/check build/verify package/build vectors/show:
 	bash tools/ops/invoice.sh $@
 
 dependencies/download:

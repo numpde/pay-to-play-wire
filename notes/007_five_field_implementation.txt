@@ -1,0 +1,85 @@
+Five-field invoice implementation, 2026-10-22
+==============================================
+
+Scope and ownership
+-------------------
+Implements notes/005_invoice_design.txt after explicit user authorization,
+relayed by the Mail owner. The package owns only the five-field wire grammar,
+strict JSON, exact-byte crypto, envelopes and installed interoperability data.
+It removes the obsolete payment-route module and all merchant/key-alias,
+identifier, EVM address/uint256 and deadline exports. No consumer repository
+was edited. Published tags and release assets are unchanged.
+
+Provenance and deliberate adaptations
+-------------------------------------
+Retains the codec/strict JSON/envelope implementation extracted from P2P
+1b65ebc3cd25f8685c733701065d5dcce848a7e7, recorded in notes/001_extraction.txt.
+The starting signed-invoice source was 2e5b079; the old grammar is removed,
+not retained behind version dispatch. Existing malformed UTF-8/JSON,
+duplicate/escaped member, envelope/base64, depth/byte-limit, exact-byte,
+lossless-number and invalid-signature campaigns were adapted to the final
+fields rather than replaced with a round-trip-only check.
+
+Public-key canonical decoding is adapted from Mail owner_key.py:96-114 at
+agent-mail 1bac8f8ccd3034c2a531cdacd1a2de41e8f5c43c. It uses the existing
+43-character unpadded base64url x representation, without Mail's JWK wrapper,
+application actor identity or enrollment machinery. Ed25519 is fixed by the
+trusted profile and key APIs. The historical Mail workshop's key-selector
+string precedent supports reuse; it is not evidence of five-field adoption.
+P2P f148d518bbed83bda7a17ccfe9eaf726d644fcf0 stores the same raw32 identity
+but had not selected a new invoice wire encoding when inspected.
+
+Generic CAIP-19 and CAIP-2 syntax was checked against the primary specifications
+on 2026-10-22. Both asset types and optional token-ID suffixes are accepted,
+with case/spelling unchanged and no semantic payment qualification:
+https://standards.chainagnostic.org/CAIPs/caip-19
+https://standards.chainagnostic.org/CAIPs/caip-2
+
+Amounts are positive decimal strings, never converted to int. The scalar
+16384-digit cap derives from the complete document's 16384-byte resource cap;
+it is not a new ledger limit. bestBefore reuses the exact 0..2^53-1 timestamp
+range, now without any ordering or clock-based policy.
+
+Mail accepted the fresh reference consumer domain P2P-INVOICE-4 followed by LF,
+hex 5032502d494e564f4943452d340a. Candidate profile 3 is deliberately not reused.
+The library still has no default profile, marker, delimiter or legacy fallback.
+Provider equality is checked against the actual supplied Ed25519 verification
+key and against the private key's public half on signing.
+
+The public RFC 8032 test-1 seed is used only in test setup and the explicit
+make vectors/show computation lane, which prints candidate expectations and
+never writes source. The installed vectors contain only public identities,
+signatures and synthetic offers/voucher contexts. Independent voucher-digest
+qualification is separate from this Ed25519/hash computation.
+
+Dependency advisory review
+----------------------------
+Refreshed OSV exact-version querybatch on 2026-10-22 through explicitly selected
+host interface wlp1s0 before offline installation. No matches: cryptography
+50.0.2, cffi 2.1.1, pycparser 3.11, Ruff 0.15.15. setuptools 82.0.1 returned
+GHSA-h35f-9h28-mq5c and PYSEC-2026-3447 aliases. Re-read the maintainer advisory:
+https://github.com/pypa/setuptools/security/advisories/GHSA-h35f-9h28-mq5c
+It concerns Unicode normalization mismatches in manifest exclusions on macOS.
+The maintained Linux lane copies declared inputs with ASCII-only tracked
+paths/rules and verifies exact wheel/sdist inventories. The triggering naming
+condition is absent. Existing reviewed locks and prepared tool image remain.
+
+Qualification and publication status
+--------------------------------------
+Candidate source qualification passed make lint/check, all 43 repository
+checks (including live kernel containment), all 40 invoice tests, current
+offline dependency-byte verification, package/build and test/package. The
+original wheel and the wheel rebuilt offline from its sdist passed fresh
+source-free installation, exact payload/metadata/import-origin checks,
+fixed signature verification, provider-key mismatch rejection, arbitrary
+service values and signing/verification under a fresh matching provider key.
+These candidate checks do not establish the final frozen artifact identity.
+
+An independent read-only reviewer found no concrete protocol/cryptographic
+defect. Its missing encoder-depth-boundary proof was restored and passed;
+its stale documentation observations were corrected. Independent EIP-712
+voucher oracle evidence is pending through the Mail owner's relay.
+
+Version 0.2.0 is prepared in source; no new public release, Pages publication
+or consumer runtime/deployment is claimed here. Final committed source and
+artifact identities will be recorded after the remaining vector evidence.

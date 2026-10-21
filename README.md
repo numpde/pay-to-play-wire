@@ -2,7 +2,7 @@
 
 **[Documentation — GitHub Pages](https://numpde.github.io/signed-invoice/)** · [Documentation source](docs/index.md)
 
-Development and operations for the Python merchant-invoice library. Protocol,
+Development and operations for the Python provider-invoice library. Protocol,
 API and consumer guidance live in the documentation above.
 
 ## Development
@@ -47,6 +47,7 @@ make test/invoice/normative
 make test/invoice/adversarial
 make test/invoice/integration
 make test/package
+make vectors/show
 ```
 
 `test/repository` discovers `notes/*_release_v*.md` and rejects manual wrapping of

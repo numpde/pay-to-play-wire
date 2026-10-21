@@ -1,4 +1,4 @@
-"""Strict merchant invoice wire rules; applications own trust and admission."""
+"""Strict five-field invoice wire rules; applications own trust and admission."""
 
 from .codec import (
     JsonNumber,
@@ -14,22 +14,13 @@ from .codec import (
 )
 from .errors import InvoiceError
 from .fields import (
-    EVM_ADDRESS_LENGTH,
-    EVM_ADDRESS_PATTERN,
-    NATIVE_ASSET,
+    require_amount,
     require_asset,
-    require_deadline,
-    require_evm_address,
-    require_identifier,
-    require_merchant_id,
-    require_uint256,
+    require_best_before,
+    require_public_key,
 )
-from .payment import validate_payment_route
 
 __all__ = [
-    "EVM_ADDRESS_LENGTH",
-    "EVM_ADDRESS_PATTERN",
-    "NATIVE_ASSET",
     "InvoiceError",
     "JsonNumber",
     "decode_envelope",
@@ -38,14 +29,11 @@ __all__ = [
     "encode_invoice",
     "invoice_hash",
     "invoice_signing_message",
+    "require_amount",
     "require_asset",
-    "require_deadline",
-    "require_evm_address",
-    "require_identifier",
-    "require_merchant_id",
-    "require_uint256",
+    "require_best_before",
+    "require_public_key",
     "sign_invoice",
     "sign_invoice_detached",
-    "validate_payment_route",
     "verify_invoice",
 ]

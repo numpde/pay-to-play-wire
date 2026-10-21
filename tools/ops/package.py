@@ -84,7 +84,6 @@ def _check_captured_artifacts(artifacts):
         "signed_invoice/codec.py",
         "signed_invoice/errors.py",
         "signed_invoice/fields.py",
-        "signed_invoice/payment.py",
         "signed_invoice/vectors/invoice.json",
     }
     with zipfile.ZipFile(wheel) as archive:
@@ -175,8 +174,9 @@ import json
 import sys
 from pathlib import Path
 import signed_invoice
-from signed_invoice import decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice, validate_payment_route
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from signed_invoice import InvoiceError, JsonNumber, decode_invoice, encode_invoice, invoice_hash, encode_envelope, sign_invoice, verify_invoice
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+import base64
 distribution = importlib.metadata.distribution('signed-invoice')
 project = json.loads(sys.argv[1])
 assert distribution.version == project['version']
@@ -187,22 +187,43 @@ for development_module in ('tools', 'tests'):
     assert importlib.util.find_spec(development_module) is None, f"Installed runtime can import development module {development_module!r}."
 vectors = json.loads(importlib.resources.files('signed_invoice').joinpath('vectors/invoice.json').read_bytes())
 domain = vectors['invoicePrefixUtf8'].encode()
-key = Ed25519PrivateKey.generate()
+for obsolete in ('validate_payment_route', 'require_merchant_id', 'require_identifier',
+                 'require_evm_address', 'require_uint256', 'require_deadline', 'NATIVE_ASSET'):
+    assert not hasattr(signed_invoice, obsolete)
 for case in vectors['cases']:
     raw = case['invoiceUtf8'].encode()
     fields = decode_invoice(raw)
-    assert signed_invoice.require_merchant_id(fields['merchantId']) == fields['merchantId']
-    assert signed_invoice.require_identifier(fields['invoiceId']) == fields['invoiceId']
-    assert signed_invoice.require_evm_address(fields['customer']) == fields['customer']
-    assert signed_invoice.require_asset(fields['asset']) == fields['asset']
-    assert signed_invoice.require_uint256(fields['amount'], positive=True) == fields['amount']
-    assert signed_invoice.require_deadline(fields['acceptBy']) == fields['acceptBy']
+    assert signed_invoice.require_public_key(fields['provider']) == fields['provider']
+    assert signed_invoice.require_public_key(fields['beneficiary']) == fields['beneficiary']
+    assert signed_invoice.require_asset(fields['payment']['asset']) == fields['payment']['asset']
+    assert signed_invoice.require_amount(fields['payment']['amount']) == fields['payment']['amount']
+    assert signed_invoice.require_best_before(fields['bestBefore']) == fields['bestBefore']
     assert raw == encode_invoice(fields)
     assert case['invoiceHash'] == invoice_hash(raw, domain=domain)
-    assert raw == verify_invoice(sign_invoice(raw, key, domain=domain), domain=domain,
-                                merchant_id=fields['merchantId'], merchant_key_id=fields['merchantKeyId'], public_key=key.public_key())
-    validate_payment_route(raw, chain_id=fields['chainId'], payment_contract=fields['paymentContract'], asset=fields['asset'])
-print('Installed distribution origin, metadata, resources and crypto round trip passed.')
+    key = Ed25519PublicKey.from_public_bytes(base64.urlsafe_b64decode(fields['provider'] + '='))
+    signature = base64.b64decode(case['signatureBase64'])
+    assert raw == verify_invoice(encode_envelope(raw, signature), domain=domain, public_key=key)
+    for service in (None, [], True, 'text', JsonNumber('1.234567890123456789e99999')):
+        changed = dict(fields, bestBefore=0, service=service)
+        assert service == decode_invoice(encode_invoice(changed))['service']
+    other = Ed25519PrivateKey.generate()
+    fresh = dict(fields, provider=base64.urlsafe_b64encode(other.public_key().public_bytes_raw()).rstrip(b'=').decode())
+    fresh_raw = encode_invoice(fresh)
+    assert fresh_raw == verify_invoice(sign_invoice(fresh_raw, other, domain=domain), domain=domain, public_key=other.public_key())
+    forged = encode_envelope(raw, other.sign(domain + raw))
+    try:
+        verify_invoice(forged, domain=domain, public_key=other.public_key())
+    except InvoiceError:
+        pass
+    else:
+        raise AssertionError('A different trusted key authenticated the named provider.')
+    try:
+        encode_invoice(dict(fields, version=2))
+    except InvoiceError:
+        pass
+    else:
+        raise AssertionError('A legacy version member was accepted.')
+print('Installed origin, metadata, resources, final grammar and provider-bound verification passed.')
 """
         for candidate in (wheel, rebuilt[0]):
             execute(

@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-The five-field design was agreed in the Mail workshop and confirmed by the user's JSON example on 2026-10-22. It supersedes the eleven- and twelve-field proposals. Five-field implementation and release are paused for discussion. The obsolete candidate code, API guide and vector changes were removed; the maintained implementation continues to use the existing wire version 2 grammar. Published artifacts retain their original grammar and exact bytes. No five-field runtime, consumer adoption or release is established by this note.
+The five-field design was agreed in the Mail workshop and confirmed by the user's JSON example on 2026-10-22. It supersedes the eleven- and twelve-field proposals. Implementation was explicitly authorized on 2026-10-22 and the maintained source now targets the five-field grammar and 0.2.0 API. Published 0.1.x artifacts retain their original grammar and exact bytes. Qualification and release status are recorded separately in notes/007_five_field_implementation.txt; source implementation does not establish consumer adoption or deployment.
 
 An invoice is the provider's signed offer: the service promised to a beneficiary for an explicit payment amount and asset, with a best-effort validity time. A payment authorization references the hash of that exact offer. Provider acceptance, payment collection and service fulfillment remain separate decisions and effects.
 
@@ -61,25 +61,25 @@ Every field is covered by the signature and exact-byte hash. Mail alone interpre
 - `acceptBy` and `redeemBy`: the design supplies only best-effort `bestBefore`. Do not reintroduce either hard cutoff under another name or treat `bestBefore` as an automatic reservation-release, collection or first-fulfillment deadline.
 - `serviceTerms`: `service` replaces the required product-object shape and allows arbitrary provider-owned JSON values.
 
-## Wire details to settle before implementation
+## Settled wire representation
 
-- Fix one exact public-key encoding for both key fields, including algorithm identification, length, padding and alternative-spelling rejection. Invoice signatures retain the existing Ed25519 algorithm. Reuse an existing agreed consumer representation rather than inventing an alias scheme.
-- Fix the accepted CAIP-19 asset forms and any namespace-specific spelling policy. The CAIP-19 standard is case-sensitive and does not itself require canonicalization; preserving original bytes remains mandatory. Parsing a supported identifier is separate from qualifying a payable asset.
-- Fix amount syntax, positivity and resource bounds without importing EVM uint256 limits into every asset by assumption. The selected payment adapter owns narrower ledger or contract bounds.
-- Fix the JSON token, range and precision for Unix seconds. The codec owns representation, while the provider owns the best-effort acceptance decision.
-- Select the trusted signing domain/profile explicitly and regenerate exact-byte invoice and independent payment-voucher vectors for the final representation. Old candidate hashes and digests are not evidence for new bytes.
+- Both keys are strings containing canonical unpadded base64url of exactly 32 raw Ed25519 public bytes (43 characters). The trusted signing profile and Ed25519 key APIs fix the algorithm; there is no document algorithm negotiation. Reuse Mail's public-JWK x decoder rules and workshop string representation, without the JWK wrapper, aliases or prefixes. Reject alternate alphabets, padding, lengths and unused pad-bit spellings.
+- Accept generic CAIP-19 asset_type and optional /token_id syntax, with CAIP-2 chain syntax and the standard component length bounds. Preserve case and spelling, including percent characters; impose no namespace-specific canonicalization or payment support policy. Maximum complete identifier length is 258 characters. A syntactically accepted identifier is not a qualified payable asset.
+- Amounts match [1-9][0-9]* and stay strings. The scalar helper caps digits at the existing 16384-byte document resource bound; complete documents still must fit that byte limit. There is no conversion to a Python integer or EVM uint256 policy. Payment adapters own narrower bounds.
+- bestBefore must be a canonical JSON integer token in 0..2^53-1. No negative zero, string, boolean, fractional or exponent spelling is accepted. Decode it to a Python integer only after bounded lexical validation, without consulting a clock.
+- The final reference consumer profile uses P2P-INVOICE-4 followed by LF: hex 5032502d494e564f4943452d340a. Mail accepted it on 2026-10-22; obsolete candidate profile 3 is not reused. The library still takes explicit arbitrary nonempty domain bytes, with no default or inference. Final invoice/hash/signature expectations and new independent payment-voucher digests must refer to the actual new bytes.
 
 CAIP-19 reference: https://standards.chainagnostic.org/CAIPs/caip-19
 
 ## Shared API cutover
 
-Retain the existing cryptographic construction: concatenate the caller's nonempty trusted domain bytes with the exact original UTF-8 document bytes, compute SHA-256 of that preimage for invoice identity, and sign the complete preimage directly with ordinary Ed25519. The library adds no delimiter, supplies no default domain and reconstructs no JSON for verification. The actual domain bytes for the new grammar remain to be selected before final vectors and publication.
+Retain the existing cryptographic construction: concatenate the caller's nonempty trusted domain bytes with the exact original UTF-8 document bytes, compute SHA-256 of that preimage for invoice identity, and sign the complete preimage directly with ordinary Ed25519. The library adds no delimiter, supplies no default domain and reconstructs no JSON for verification. The reference profile above identifies the final vector grammar independently of the document.
 
 Retain the existing document limits of 16384 encoded bytes and container depth 16, counting the root object as depth 1. Reject duplicate decoded member names at every depth, malformed UTF-8/JSON, BOMs, nonfinite numbers and unpaired Unicode surrogates. Supporting every service value kind does not remove these limits or permit rounding nested numbers.
 
 The five-field verification API must bind the encoded provider to the actual signature-verification key and remove the merchant UUID and key-alias arguments. Caller-owned trust and authorization still apply; successful cryptographic verification alone does not enroll the provider or accept the offer.
 
-Remove validate_payment_route and its public export when the five-field grammar is implemented: it reads chainId and paymentContract, which no longer exist. P2P owns selection and qualification of its authorized route and comparison with payment.asset. Do not keep an old-grammar path or introduce a route-comparison facade to preserve the former API. Update the package payload inventory, installed-artifact checks, API guide and consumer calls in the same cutover. The maintained API stays unchanged while five-field implementation is paused.
+Remove validate_payment_route and its public export: it reads chainId and paymentContract, which no longer exist. P2P owns selection and qualification of its authorized route and comparison with payment.asset. Do not keep an old-grammar path or introduce a route-comparison facade to preserve the former API. Update the package payload inventory, installed-artifact checks and API guide in this repository; consumer owners separately update their own calls and qualify adoption. The new scalar exports are require_public_key, require_asset, require_amount and require_best_before. Remove obsolete merchant, identifier, EVM and deadline exports.
 
 Validation of the completed cutover must reject a signature by a different trusted provider than the key named in the document, reject legacy members, preserve arbitrary service values including null and lossless numeric scalars, and keep an otherwise well-formed bestBefore value independent of the clock. Installed-artifact qualification must exercise that same final grammar and API rather than retained old fixtures.
 

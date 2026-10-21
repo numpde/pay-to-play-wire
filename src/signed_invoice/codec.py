@@ -1,6 +1,6 @@
-"""Strict merchant invoice wire grammar and exact-byte cryptography.
+"""Five-field invoice wire grammar and exact-byte cryptography.
 
-Verification takes an explicitly trusted merchant/key binding. Neither a parsed
+Verification takes an explicitly trusted provider key. Neither a parsed
 invoice nor its beneficiary key supplies that trust. Keep original bytes for
 storage and retransmission; parsing does not authenticate an offer or admit it.
 """
@@ -21,36 +21,16 @@ from .errors import InvoiceError
 from .fields import (
     MAX_TIMESTAMP,
     UNSIGNED,
+    require_amount,
     require_asset,
-    require_deadline,
-    require_evm_address,
-    require_identifier,
-    require_merchant_id,
-    require_uint256,
+    require_best_before,
+    require_public_key,
 )
 
 # Fixed wire grammar and bounds, independent of payment admission policy.
 MAX_BYTES = 16384
 MAX_DEPTH = 16
-FIELDS = frozenset(
-    {
-        "version",
-        "merchantId",
-        "merchantKeyId",
-        "invoiceId",
-        "chainId",
-        "paymentContract",
-        "channelId",
-        "customer",
-        "quotedPayee",
-        "amount",
-        "acceptBy",
-        "redeemBy",
-        "beneficiary",
-        "serviceTerms",
-        "asset",
-    }
-)
+FIELDS = frozenset({"provider", "payment", "bestBefore", "beneficiary", "service"})
 NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 
 
@@ -120,7 +100,7 @@ def _load(raw):
 def decode_invoice(raw: bytes) -> dict:
     """Validate original bytes and return fresh fields, with lossless nested numbers.
 
-    version/acceptBy/redeemBy become Python integers after lexical validation.
+    bestBefore becomes a Python integer after lexical validation.
     Product numbers remain JsonNumber instances. Keep raw for hashing/signatures.
     """
     if type(raw) is not bytes:
@@ -128,43 +108,31 @@ def decode_invoice(raw: bytes) -> dict:
     if len(raw) > MAX_BYTES:
         raise InvoiceError("Cannot decode invoice: document exceeds 16384 bytes.")
     fields = _load(raw)
-    if type(fields) is not dict or "version" not in fields:
-        raise InvoiceError("Cannot decode invoice: document must be an object with an explicit version.")
-    version = fields["version"]
-    if type(version) is not JsonNumber or version.token != "2":
-        raise InvoiceError("Cannot decode invoice: version must be the JSON integer token 2.")
-    if fields.keys() != FIELDS:
-        raise InvoiceError("Cannot decode invoice: document must contain exactly its 15 required members.")
-    field = "asset"
+    if type(fields) is not dict or fields.keys() != FIELDS:
+        raise InvoiceError(
+            "Cannot decode invoice: document must contain exactly provider, payment, bestBefore, beneficiary and service."
+        )
+    payment = fields["payment"]
+    if type(payment) is not dict or payment.keys() != {"asset", "amount"}:
+        raise InvoiceError("Cannot decode invoice: payment must contain exactly asset and amount.")
+    field = "provider"
     try:
-        require_asset(fields[field], field)
-        for field, validate in (
-            ("merchantId", require_merchant_id),
-            ("merchantKeyId", require_identifier),
-            ("invoiceId", require_identifier),
-            ("paymentContract", require_evm_address),
-            ("customer", require_evm_address),
-            ("quotedPayee", require_evm_address),
-        ):
-            validate(fields[field], field)
-        for field in ("chainId", "channelId", "amount"):
-            require_uint256(fields[field], field, positive=field == "amount")
+        require_public_key(fields[field], field)
+        field = "beneficiary"
+        require_public_key(fields[field], field)
+        field = "payment.asset"
+        require_asset(payment["asset"], field)
+        field = "payment.amount"
+        require_amount(payment["amount"], field)
     except TypeError as exc:
         raise InvoiceError(f"Cannot decode invoice: {field} has the wrong JSON type.") from exc
-    for field in ("acceptBy", "redeemBy"):
-        number = fields[field]
-        if type(number) is not JsonNumber:
-            raise InvoiceError(f"Cannot decode invoice: {field} must be a JSON integer token.")
-        # Lexical checks precede bounded conversion; the scalar owner checks range.
-        if UNSIGNED.fullmatch(number.token) is None or len(number.token) > len(str(MAX_TIMESTAMP)):
-            raise InvoiceError(f"Cannot decode invoice: {field} must be a canonical JSON integer within range.")
-        fields[field] = require_deadline(int(number.token), field)
-    if fields["acceptBy"] >= fields["redeemBy"]:
-        raise InvoiceError("Cannot decode invoice: acceptBy must be earlier than redeemBy.")
-    for field in ("beneficiary", "serviceTerms"):
-        if type(fields[field]) is not dict:
-            raise InvoiceError(f"Cannot decode invoice: {field} must be a JSON object.")
-    fields["version"] = 2
+    number = fields["bestBefore"]
+    if type(number) is not JsonNumber:
+        raise InvoiceError("Cannot decode invoice: bestBefore must be a JSON integer token.")
+    # Lexical checks precede bounded conversion; the scalar owner checks range.
+    if UNSIGNED.fullmatch(number.token) is None or len(number.token) > len(str(MAX_TIMESTAMP)):
+        raise InvoiceError("Cannot decode invoice: bestBefore must be a canonical JSON integer within range.")
+    fields["bestBefore"] = require_best_before(int(number.token))
     return fields
 
 
@@ -221,12 +189,13 @@ def invoice_hash(raw: bytes, *, domain: bytes) -> str:
 def sign_invoice_detached(raw: bytes, private_key: Ed25519PrivateKey, *, domain: bytes) -> bytes:
     """Sign a validated original document; return its detached 64-byte signature.
 
-    The issuer owns selection of the private key bound to merchantId/keyId.
+    The private key must match provider. The issuer owns that key's authority.
     This function performs no I/O, persistence, enrollment or key lookup.
     """
     message = invoice_signing_message(raw, domain=domain)
     if not isinstance(private_key, Ed25519PrivateKey):
         raise TypeError("Invoice signing requires an Ed25519 private key.")
+    _require_provider(raw, private_key.public_key())
     return private_key.sign(message)
 
 
@@ -279,30 +248,31 @@ def decode_envelope(envelope: bytes) -> tuple[bytes, bytes]:
     return raw, signature
 
 
+def _require_provider(raw: bytes, public_key: Ed25519PublicKey) -> None:
+    provider = decode_invoice(raw)["provider"]
+    encoded = base64.urlsafe_b64encode(public_key.public_bytes_raw()).rstrip(b"=").decode("ascii")
+    if provider != encoded:
+        raise InvoiceError("Cannot authenticate invoice: provider differs from the signature key.")
+
+
 def verify_invoice(
     envelope: bytes,
     *,
     domain: bytes,
-    merchant_id: str,
-    merchant_key_id: str,
     public_key: Ed25519PublicKey,
 ) -> bytes:
-    """Verify using a caller-trusted merchant/key binding; return authenticated bytes.
+    """Bind provider to the caller-trusted Ed25519 key; return authenticated bytes.
 
     Pass the original envelope JSON bytes so duplicate members cannot be lost.
     The HTTP boundary owns the overall body limit. Enrollment, retirement/
     compromise policy and payment admission are the caller's responsibilities.
     """
-    if type(merchant_id) is not str or type(merchant_key_id) is not str:
-        raise TypeError("Invoice verification requires trusted merchant and key identifiers as strings.")
     raw, signature = decode_envelope(envelope)
-    fields = decode_invoice(raw)
-    if fields["merchantId"] != merchant_id or fields["merchantKeyId"] != merchant_key_id:
-        raise InvoiceError("Cannot verify invoice: merchant/key identifiers differ from the trusted binding.")
     if not isinstance(public_key, Ed25519PublicKey):
         raise TypeError("Invoice verification requires a trusted Ed25519 public key.")
+    _require_provider(raw, public_key)
     try:
         public_key.verify(signature, invoice_signing_message(raw, domain=domain))
     except InvalidSignature as exc:
-        raise InvoiceError("Cannot verify invoice: signature does not match the trusted merchant key and exact bytes.") from exc
+        raise InvoiceError("Cannot verify invoice: signature does not match the trusted provider key and exact bytes.") from exc
     return raw

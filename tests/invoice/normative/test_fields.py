@@ -1,39 +1,24 @@
-"""Offers can validate shared wire facts before a complete invoice exists."""
+"""Shared wire facts return original values without normalization or policy."""
 
 from tools.ops.container_guard import require_container
 
 require_container()
 
-import re
 import unittest
 
-from signed_invoice import (
-    EVM_ADDRESS_LENGTH,
-    EVM_ADDRESS_PATTERN,
-    NATIVE_ASSET,
-    require_asset,
-    require_deadline,
-    require_evm_address,
-    require_identifier,
-    require_merchant_id,
-    require_uint256,
-)
+from signed_invoice import require_amount, require_asset, require_best_before, require_public_key
+from tests.helpers.invoices import PROVIDER
 
 
 class FieldTests(unittest.TestCase):
-    def test_values_are_returned_without_normalization_or_policy(self):
-        merchant = "00000000-0000-0000-0000-000000000000"
-        self.assertEqual(merchant, require_merchant_id(merchant))
-        self.assertEqual("A_-09", require_identifier("A_-09"))
-        zero = "0x" + "0" * 40
-        self.assertEqual(zero, require_evm_address(zero))
-        self.assertEqual(NATIVE_ASSET, require_asset(NATIVE_ASSET))
-        self.assertEqual("0", require_uint256("0"))
-        self.assertEqual(str(2**256 - 1), require_uint256(str(2**256 - 1), positive=True))
-        self.assertEqual(0, require_deadline(0))
-        self.assertEqual(2**53 - 1, require_deadline(2**53 - 1))
+    def test_values_are_returned_without_policy_or_conversion(self):
+        self.assertEqual(PROVIDER, require_public_key(PROVIDER))
+        self.assertEqual("eip155:1/slip44:60", require_asset("eip155:1/slip44:60"))
+        self.assertEqual("1", require_amount("1"))
+        self.assertEqual("9" * 16384, require_amount("9" * 16384))
+        self.assertEqual(0, require_best_before(0))
+        self.assertEqual(2**53 - 1, require_best_before(2**53 - 1))
 
-    def test_address_schema_metadata_matches_runtime_representation(self):
-        self.assertEqual(EVM_ADDRESS_LENGTH, len(NATIVE_ASSET))
-        self.assertIsNotNone(re.fullmatch(EVM_ADDRESS_PATTERN, NATIVE_ASSET))
-        self.assertIsNone(re.fullmatch(EVM_ADDRESS_PATTERN, NATIVE_ASSET + "\n"))
+    def test_caip_component_boundaries_and_case_sensitive_reference_alphabet(self):
+        for asset in ("aaa:A/a-a:%.-", "a" * 8 + ":" + "A_-0" * 8 + "/" + "a" * 8 + ":" + "B" * 128 + "/" + "C" * 78):
+            self.assertEqual(asset, require_asset(asset))

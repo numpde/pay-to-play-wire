@@ -9,8 +9,6 @@ import json
 import unittest
 from importlib.resources import files
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from signed_invoice import (
     InvoiceError,
     decode_envelope,
@@ -22,6 +20,7 @@ from signed_invoice import (
     sign_invoice_detached,
     verify_invoice,
 )
+from tests.helpers.invoices import signing_key
 
 
 class EnvelopeTests(unittest.TestCase):
@@ -29,11 +28,8 @@ class EnvelopeTests(unittest.TestCase):
         vectors = json.loads(files("signed_invoice").joinpath("vectors/invoice.json").read_bytes())
         self.domain = vectors["invoicePrefixUtf8"].encode()
         self.raw = vectors["cases"][0]["invoiceUtf8"].encode() + b"\n"
-        fields = json.loads(self.raw)
-        self.key = Ed25519PrivateKey.generate()
-        self.trust = dict(
-            merchant_id=fields["merchantId"], merchant_key_id=fields["merchantKeyId"], public_key=self.key.public_key()
-        )
+        self.key = signing_key()
+        self.trust = dict(public_key=self.key.public_key())
 
     def test_detached_signing_composes_with_envelope_encoding_and_verification(self):
         signature = sign_invoice_detached(self.raw, self.key, domain=self.domain)
@@ -71,7 +67,7 @@ class EnvelopeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 operation(self.raw, domain=b"")
 
-    def test_unsupported_document_versions_fail_before_crypto(self):
+    def test_obsolete_version_markers_fail_before_crypto(self):
         for version in (1, 0, 3):
             fields = json.loads(self.raw)
             fields["version"] = version
@@ -96,6 +92,6 @@ class EnvelopeTests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 encode_invoice(fields)
         envelope = sign_invoice(self.raw, self.key, domain=self.domain)
-        for name in ("merchant_id", "merchant_key_id"):
+        for public_key in (None, b"key", self.key):
             with self.assertRaises(TypeError):
-                verify_invoice(envelope, domain=self.domain, **dict(self.trust, **{name: b"identifier"}))
+                verify_invoice(envelope, domain=self.domain, public_key=public_key)
