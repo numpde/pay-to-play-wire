@@ -304,6 +304,9 @@ class InvoiceCodecTests(unittest.TestCase):
         for token in ("NaN", "01", "1 2", "", "\u0661"):
             with self.assertRaises(InvoiceError):
                 JsonNumber(token)
+        for token in (1, 0.5, None, True, b"1"):
+            with self.assertRaises(TypeError):
+                JsonNumber(token)
 
     def test_signer_rejects_invalid_document_before_issuing_signature(self):
         with self.assertRaises(InvoiceError):

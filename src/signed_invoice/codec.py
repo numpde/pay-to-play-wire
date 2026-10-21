@@ -45,7 +45,9 @@ class JsonNumber:
     token: str
 
     def __post_init__(self):
-        if type(self.token) is not str or NUMBER.fullmatch(self.token) is None:
+        if type(self.token) is not str:
+            raise TypeError("JSON number tokens must be strings.")
+        if NUMBER.fullmatch(self.token) is None:
             raise InvoiceError("Cannot encode JSON number: expected a finite JSON number token.")
 
 
