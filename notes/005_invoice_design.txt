@@ -44,26 +44,26 @@ Every field is covered by the signature and exact-byte hash. Mail alone interpre
 
 ## Field decisions
 
-- `provider` binds the signing identity into the offer and its derived hash. It replaces merchant UUID and key-alias indirection. A document-supplied key does not establish its own trust: the application verifies registration and authorization for the intended provider.
+- `provider` binds the signing identity into the offer and its derived hash. It replaces merchant UUID and key-alias indirection. Verification must require the decoded provider key to equal the key that verifies the signature; separate trust checks on two different keys are insufficient. A document-supplied key does not establish its own trust: the application verifies registration and authorization for the intended provider.
 - `payment.asset` states the offered unit explicitly using CAIP-19. The identifier includes chain and asset identity; it does not identify or qualify a payment contract, establish token behavior or guarantee that a consumer supports the asset.
 - `payment.amount` commits to the price as an integer string in the asset's base units. No floating-point conversion, ticker interpretation or implicit denomination is introduced.
 - `bestBefore` expresses best-effort offer validity in Unix seconds. Receipt before it does not guarantee acceptance; receipt after it permits the provider to drop the offer, without requiring every consumer to reject it. The codec validates its wire representation without consulting a clock or making an acceptance decision.
 - `beneficiary` binds the intended recipient's public key, independently of the payer. The workshop retains this as an explicit shared field rather than hiding recipient authorization inside an opaque product schema. Possession and authority remain application checks.
-- `service` commits to the provider's service description as any valid JSON value, including objects, arrays, strings, numbers, booleans or null. The provider owns its meaning and validation. The shared codec preserves exact bytes and lossless numbers without imposing Mail's schema on other providers.
+- `service` commits to the provider's service description using any JSON value kind, including objects, arrays, strings, numbers, booleans or null, within the document's strict JSON and resource limits. The provider owns its meaning and validation. The shared codec preserves exact bytes and lossless numbers without imposing Mail's schema on other providers.
 
 ## Removed fields and their owners
 
 - `version`: the caller's trusted signing context selects the grammar. Do not retain a document marker, infer a trusted profile from untrusted contents or try legacy profiles until a signature verifies.
 - `merchantId` and `merchantKeyId`: the encoded provider public key supplies signing identity; application enrollment supplies trust and any account association. Do not restore a UUID or key alias inside the document.
 - `invoiceId` and an embedded `invoiceHash`: the invoice is identified outside the document by the hash of its exact verified bytes under the trusted domain. Byte-identical offers under that domain have the same identity. Issuance recovery and duplicate fulfillment are server responsibilities.
-- `customer` and `channelId`: payment authorization and the accepted purchase supply payer and position. They do not restrict the merchant offer. Consumers must serialize first acceptance by invoice hash; a competing valid voucher can remain collectible after admission rejection and still needs the accounting owner's authority handling.
+- `customer` and `channelId`: payment authorization and the accepted purchase supply payer and channel. They do not restrict the merchant offer. P2P's authoritative purchase ledger must serialize first acceptance by invoice hash across all payer/channel positions. A competing valid payment voucher can remain collectible after admission rejection; P2P must retain and account for that authorization. Mail's own store separately enforces single fulfillment.
 - Separate `chainId`, `paymentContract` and `quotedPayee`: CAIP-19 supplies the offered chain and asset, while P2P qualifies the authorized settlement route and payee through provider registration and voucher context. Asset equality alone cannot qualify a route or protect against mutable payees. This responsibility is outside the shared document grammar.
 - `acceptBy` and `redeemBy`: the design supplies only best-effort `bestBefore`. Do not reintroduce either hard cutoff under another name or treat `bestBefore` as an automatic reservation-release, collection or first-fulfillment deadline.
 - `serviceTerms`: `service` replaces the required product-object shape and allows arbitrary provider-owned JSON values.
 
 ## Wire details to settle before implementation
 
-- Fix the public-key algorithm and one exact encoding for both key fields, including length, padding and alternative-spelling rejection. Reuse an existing agreed consumer representation rather than inventing an alias scheme.
+- Fix one exact public-key encoding for both key fields, including algorithm identification, length, padding and alternative-spelling rejection. Invoice signatures retain the existing Ed25519 algorithm. Reuse an existing agreed consumer representation rather than inventing an alias scheme.
 - Fix the accepted CAIP-19 asset forms and any namespace-specific spelling policy. The CAIP-19 standard is case-sensitive and does not itself require canonicalization; preserving original bytes remains mandatory. Parsing a supported identifier is separate from qualifying a payable asset.
 - Fix amount syntax, positivity and resource bounds without importing EVM uint256 limits into every asset by assumption. The selected payment adapter owns narrower ledger or contract bounds.
 - Fix the JSON token, range and precision for Unix seconds. The codec owns representation, while the provider owns the best-effort acceptance decision.
@@ -71,12 +71,28 @@ Every field is covered by the signature and exact-byte hash. Mail alone interpre
 
 CAIP-19 reference: https://standards.chainagnostic.org/CAIPs/caip-19
 
+## Shared API cutover
+
+Retain the existing cryptographic construction: concatenate the caller's nonempty trusted domain bytes with the exact original UTF-8 document bytes, compute SHA-256 of that preimage for invoice identity, and sign the complete preimage directly with ordinary Ed25519. The library adds no delimiter, supplies no default domain and reconstructs no JSON for verification. The actual domain bytes for the new grammar remain to be selected before final vectors and publication.
+
+Retain the existing document limits of 16384 encoded bytes and container depth 16, counting the root object as depth 1. Reject duplicate decoded member names at every depth, malformed UTF-8/JSON, BOMs, nonfinite numbers and unpaired Unicode surrogates. Supporting every service value kind does not remove these limits or permit rounding nested numbers.
+
+The five-field verification API must bind the encoded provider to the actual signature-verification key and remove the merchant UUID and key-alias arguments. Caller-owned trust and authorization still apply; successful cryptographic verification alone does not enroll the provider or accept the offer.
+
+Remove validate_payment_route and its public export when the five-field grammar is implemented: it reads chainId and paymentContract, which no longer exist. P2P owns selection and qualification of its authorized route and comparison with payment.asset. Do not keep an old-grammar path or introduce a route-comparison facade to preserve the former API. Update the package payload inventory, installed-artifact checks, API guide and consumer calls in the same cutover. The current 0.1.1 API stays unchanged while implementation is paused.
+
+Validation of the completed cutover must reject a signature by a different trusted provider than the key named in the document, reject legacy members, preserve arbitrary service values including null and lossless numeric scalars, and keep an otherwise well-formed bestBefore value independent of the clock. Installed-artifact qualification must exercise that same final grammar and API rather than retained old fixtures.
+
 ## Consumer lifecycle obligations
 
-Mail must reconcile exclusive address reservations, offer reuse, accepted-purchase recovery and fulfillment with the absence of a signed redemption deadline. Decide which server-owned state makes an offer eligible for acceptance and a reservation available for reassignment, and how an already accepted purchase is recovered. This note does not invent a replacement timer or field and does not claim that best-effort offer validity resolves those races.
+P2P is the accounting service. A payment voucher is the payer's signed payment authorization. A payment position is that payer's payment state on one channel in one chain/contract deployment. These concepts belong to payment admission and accounting; they are not additional invoice members.
 
-P2P resolves the provider through its uniquely registered invoice-purpose public key and must qualify the provider-authorized route, requested asset, observed payee, settlement deployment and voucher-selected position through its own trusted context. Bare channel registration is insufficient. Its accepted purchase and retained evidence must bind the actual admitted route and position. A valid payment authorization can remain on-chain authority even when the offer is declined or the purchase loses first acceptance; rejection does not revoke that authorization or establish a refund.
+Mail must reconcile exclusive address reservations, offer reuse, accepted-purchase recovery and fulfillment with the absence of a signed redemption deadline. Releasing an unaccepted reservation requires authoritative P2P admission state and coordination that prevents acceptance racing address release; an uncertain admission outcome cannot be treated as rejection. The coordination protocol remains to be designed. This note does not invent a replacement timer or field and does not claim that best-effort offer validity resolves those races.
+
+P2P resolves the provider through its uniquely registered invoice-purpose public key and must qualify the provider-authorized route, requested asset, observed payee, settlement deployment and voucher-selected position through its own trusted context. Recording a channel reference neither grants the provider permission to use that payout route nor qualifies its payee or asset. The accepted purchase and retained evidence must bind the actual admitted route and position. A valid payment authorization can remain on-chain authority even when the offer is declined or the purchase loses first acceptance; rejection does not revoke that authorization or establish a refund.
 
 P2P may initially decline offers received after `bestBefore`. Accepting a late offer requires assurance that the provider can still fulfill it. Mail cannot reclaim a reserved address from a timestamp alone when acceptance has happened or its outcome is uncertain. These are consumer lifecycle prerequisites, not reasons to restore invoice fields.
+
+P2P records the actual policy, decision time and provider qualification for a fresh acceptance. Recovery of an already accepted purchase is a separate operation and must not repeat fresh admission or reject that accepted purchase merely because bestBefore has passed. Mail retains its own beneficiary authorization, single-fulfillment and receipt-recovery responsibilities. These consumer lifecycle prerequisites must be resolved before production payment promises; they do not block implementation of the shared codec.
 
 The shared package continues to own strict JSON, exact-byte hashing/signing, envelope handling and installed interoperability vectors. Provider admission, enrollment, reservation release, collection, retention, refunds and fulfillment remain consumer-owned. Future validation must prove the completed five-field implementation and the declared consumer inputs; earlier candidate test runs prove neither.
