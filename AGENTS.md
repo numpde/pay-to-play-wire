@@ -35,6 +35,8 @@ reusable setup. Add categories only when populated. Shared interoperability
 vectors are package data under src/signed_invoice/vectors so installed consumers
 can read the same authoritative files without copying fixtures.
 
+Write design and working notes as .txt files under notes/.
+
 Use unittest and assertEqual(expected, observed). Prove both successful reachability
 and each distinct unsafe input rejection. Source and recorded argv are separate
 from live posture and installed-artifact proof. Consumer compatibility requires
