@@ -13,10 +13,10 @@ Ed25519 signatures, signed envelopes and pure payment-route comparison.
 Use the tested wheel from the tagged GitHub release as an application dependency:
 
 ```text
-signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.1.1/signed_invoice-0.1.1-py3-none-any.whl#sha256=08d1635413d0ceeb6d3985b10b037cac5589c6e54e6c2dc1dd50d931e910a38a
+signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.1.2/signed_invoice-0.1.2-py3-none-any.whl#sha256=a378138da68b70502bdc9630e21b9b3a3431678458f86851d3a1844bd5b64dee
 ```
 
-The [release](https://github.com/numpde/signed-invoice/releases/tag/v0.1.1)
+The [release](https://github.com/numpde/signed-invoice/releases/tag/v0.1.2)
 includes the source distribution, hashes and validation logs. Acquire dependencies
 explicitly, verify their hashes and install offline using the consuming
 application's maintained workflow. The runtime dependency is `cryptography==50.0.2`.
