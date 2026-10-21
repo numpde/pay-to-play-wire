@@ -125,8 +125,48 @@ af0a38bbf6ef1adae213091e4c4641b2e8205bf7b0f6a1b422b6599d037c33ee
 Makefile SHA-256:
 c7d141f9bd5330a039d6073fa446d3114ffa2c20cb4ff4cec71960fe55ba156e
 
-Version 0.2.0 is prepared in source and explicitly authorized for release by
-the user. No new public release, Pages publication or consumer runtime or
-deployment is claimed before the maintained publisher verifies success.
-Final frozen-source and downloaded-artifact identities will be recorded
-after publication; existing releases and tags remain unchanged.
+Version 0.2.0 was explicitly authorized for release by the user. Publication
+and final frozen artifact identities are recorded below. Consumer adoption,
+runtime and deployment remain separate claims.
+
+0.2.0 publication
+-------------------
+Published through make publish/release TAG=v0.2.0 from clean frozen source:
+2b08d09b4925dc6c1513276ee8cdd78a87a2ba1a
+Source tree:
+f50a8e44f3c3a441c3ba8d0c74caae65c473f77e
+Tool image:
+sha256:9067f16a77e9ba270df5e0f7b55d29d5b5cb9d40bcff86bcd1a330489621a397
+Lint passed, all 43 repository checks including live kernel containment passed,
+all 40 invoice tests passed, and both fresh source-free installed-wheel checks
+passed. Downloaded draft wheel, sdist and hash-manifest identities matched the
+exact installed-artifact qualification receipts. Both downloaded logs matched
+the local qualification logs before the draft was made public.
+
+Release:
+https://github.com/numpde/signed-invoice/releases/tag/v0.2.0
+Wheel SHA-256:
+0bf79745ff68d86dc58ddd78dcdc9cd4df9f711dd02ae2e397ef111679183fe5
+Sdist SHA-256:
+f6daa97a94256cb9b0543e961ff72b7f7e4ea914dbd5d6cd81f92556f033557a
+sha256.json SHA-256:
+ac06bbd9097f32e240eb9780f0d36eba1ec3cf02ff263b518390d835b3719835
+Release build-log SHA-256:
+bb4a1d22d11b8ea2681626c442d523dbeceb603ce33b9be21efd74575bfdb618
+Release test-log SHA-256:
+800df336afc4e94ee784b9b716542b2aae2939b919fddfacd57a51a6f1f9d52c
+Final installed vector resource SHA-256:
+e7109d76e91248d7a73cd2751cafd63dcddaaf22fab37486e9915fc539537831
+
+Local captured source, downloaded artifacts, logs and API receipts:
+.work/publication.wQAbUf7R/
+Both consumer owners received the exact source revision, wheel URL/hash,
+final vector identity, domain and independent voucher digests. The candidate
+wheel hash is superseded by these frozen-release bytes.
+
+Live GitHub inspection confirmed isDraft=false and the annotated tag resolves
+to the frozen source above. Anonymous HTTPS wheel acquisition through the
+explicit wlp1s0 interface matched the verified downloaded draft byte-for-byte.
+All preexisting tag object IDs matched their before-publication capture.
+The 0.1.2 release's asset IDs, names, hashes, sizes and creation/update times
+matched its captured pre-publication metadata. No earlier artifact was replaced.

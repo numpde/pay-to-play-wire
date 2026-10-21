@@ -1,8 +1,8 @@
-# 0.2.0 — draft release note
+# 0.2.0 — five-field invoices
 
 ## Status
 
-This is the release-candidate note for the implemented five-field invoice format. Source targets 0.2.0; independent interoperability evidence and qualification status are recorded in notes/007_five_field_implementation.txt. Publication is explicitly authorized and must still verify final frozen-source artifacts before becoming public.
+Published [0.2.0](https://github.com/numpde/signed-invoice/releases/tag/v0.2.0) from frozen source `2b08d09b4925dc6c1513276ee8cdd78a87a2ba1a` through `make publish/release TAG=v0.2.0`. Independent interoperability evidence, exact artifact hashes and qualification records are in notes/007_five_field_implementation.txt. Existing published 0.1.x assets and tags retain their original grammar and bytes.
 
 ## Invoice format
 
@@ -24,12 +24,14 @@ The sole invoice identity remains SHA-256 of the caller's nonempty trusted domai
 
 Retain strict UTF-8/JSON, duplicate-member rejection, lossless nested numbers, the 16384-byte document limit and container depth 16. Arbitrary service value kinds remain subject to those limits. Existing published tags, artifacts and document bytes remain unchanged.
 
-## Readiness
+## Qualification
 
-The adapted normative, adversarial and integration campaigns cover strict JSON, lossless service values including null and numeric scalars, all field signatures, legacy rejection and provider/key equality. Source-only tests do not establish installed-package or consumer proof; see the implementation record for completed checks and remaining evidence.
+The frozen release passed lint, all 43 repository checks including live containment, all 40 invoice tests, and fresh source-free installation checks for the original wheel and the wheel rebuilt offline from its sdist. The adapted campaigns cover strict JSON, lossless service values including null and numeric scalars, all field signatures, legacy rejection and provider/key equality. Downloaded draft assets matched the qualified identities before publication.
 
 Independent Node/OpenSSL checks verified both new byte/hash/base64/signature vectors and their whitespace-mutation controls. A separate cached-viem implementation supplied the new EIP-712 voucher digests. Exact image, input, module and receipt identities plus the cached-dependency integrity limitation are retained in the implementation record; these are no claim of Solidity execution or payment settlement.
 
-Before publication, qualify the final committed source snapshot, installed wheel/sdist artifacts, independent voucher vectors and downloaded release assets. Consumer reservation/admission coordination and explicit package adoption are separate prerequisites for production payment promises. Existing published artifacts are preserved.
+Wheel SHA-256: `0bf79745ff68d86dc58ddd78dcdc9cd4df9f711dd02ae2e397ef111679183fe5`. Sdist SHA-256: `f6daa97a94256cb9b0543e961ff72b7f7e4ea914dbd5d6cd81f92556f033557a`. Installed vector SHA-256: `e7109d76e91248d7a73cd2751cafd63dcddaaf22fab37486e9915fc539537831`.
+
+Consumer reservation/admission coordination and explicit package adoption remain separate prerequisites for production payment promises. This package release establishes no consumer deployment, payment collection or fulfillment.
 
 The complete design, exact JSON example and consumer responsibilities are recorded in notes/005_invoice_design.txt.

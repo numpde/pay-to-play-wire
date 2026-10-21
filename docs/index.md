@@ -7,7 +7,15 @@ title: signed-invoice
 
 The Python package owns the five-field invoice grammar, strict JSON, exact-byte hashing and Ed25519 signatures and envelopes. Applications own provider enrollment and authorization, product schemas, payment routes, admission, persistence, collection and fulfillment.
 
-The main branch prepares the breaking 0.2.0 format described here. Published 0.1.x releases retain their original version-2 grammar and exact assets. Acquire the intended release explicitly and verify its immutable wheel hash before offline installation; switching packages does not migrate stored offers or consumer policy.
+The [0.2.0 release](https://github.com/numpde/signed-invoice/releases/tag/v0.2.0) implements the breaking five-field format described here. It was qualified from source `2b08d09b4925dc6c1513276ee8cdd78a87a2ba1a`. Published 0.1.x releases retain their original version-2 grammar and exact assets. Switching packages does not migrate stored offers or consumer policy.
+
+The immutable wheel requirement is:
+
+```text
+signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.2.0/signed_invoice-0.2.0-py3-none-any.whl#sha256=0bf79745ff68d86dc58ddd78dcdc9cd4df9f711dd02ae2e397ef111679183fe5
+```
+
+Acquire it explicitly, verify the actual wheel hash and install offline in the consumer's maintained environment. The release includes the sdist, hash manifest and qualification logs. Both the original wheel and the wheel rebuilt from the sdist passed fresh source-free installation checks; downloaded draft assets were verified before publication.
 
 ## Invoice document
 
