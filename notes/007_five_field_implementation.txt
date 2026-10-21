@@ -77,9 +77,56 @@ These candidate checks do not establish the final frozen artifact identity.
 
 An independent read-only reviewer found no concrete protocol/cryptographic
 defect. Its missing encoder-depth-boundary proof was restored and passed;
-its stale documentation observations were corrected. Independent EIP-712
-voucher oracle evidence is pending through the Mail owner's relay.
+its stale documentation observations were corrected. A final review also
+confirmed the JsonNumber API type correction: wrong token argument types
+raise TypeError; malformed string tokens raise InvoiceError. Final lint and
+all 40 invoice tests passed after that correction.
 
-Version 0.2.0 is prepared in source; no new public release, Pages publication
-or consumer runtime/deployment is claimed here. Final committed source and
-artifact identities will be recorded after the remaining vector evidence.
+Independent interoperability oracle
+--------------------------------------
+A separate agent adapted only voucher type/domain/message construction from
+dapp32 6c1b1279760dec1b43f56964a22c77e46b4e4f14 protocol.ts and
+shared-vector.test.ts. It independently checked SHA-256, base64 and Ed25519
+verification/deterministic regeneration with Node/OpenSSL, and EIP-712 with
+cached viem 2.50.4. No signed-invoice code was imported. Both original cases
+passed; appending LF preserved decoded JSON while changing invoice hash and
+voucher digest and invalidating the original invoice signature.
+
+Original immutable oracle input fixture SHA-256 (before adding digest results
+and provenance, invoice bytes unchanged):
+6e239bbe73007c7313ac17a5b0b39439c1dab5a62fb871e777005ae1ef92981b
+This input is retained in committed source 972261e4c62a1a7d035ad5fb4814310e4fbdef9e.
+Native voucher digest:
+0x3274bc212841e8e2df6e1292655a55b22258406950d219fe4178517999ca7f1a
+ERC20 voucher digest:
+0xdb5273c6a64fcfed026c7dfb40d59fc2191185ab5f65a10ce79d38a47fb75819
+
+The donor's maintained package-test image was used by immutable ID:
+sha256:7266ae0983961960bc9cb7f11e833b6b533e4c41ecfcb9dd12b19883e09d81ce
+Node 24.22.0, OpenSSL 3.5.8; no network, acquisition, install or consumer edit.
+Runtime caller 1000:1000, read-only root and explicit fixture/probe/module
+mounts, dropped capabilities, no new privileges, CPU/memory/PID bounds.
+Donor package-lock.json SHA-256:
+1fbcf3976d458a5b6eaee0eb61345670d9b23a285689b25ac689e89dc6810d60
+Before/after actual full dependency-tree fingerprint (12392 files/symlinks):
+14a40582878640626f1cdd9023624d36abfbbfd11c0219dc3cc1d42a9019e2dd
+Actual consumed 394-module path/SHA-256 manifest fingerprint:
+f9e5b3ece89ad8bb2700076a49c71d5116331d1a63b377bd509302141847958b
+The cached module bytes are identified; original npm archive integrity was
+not independently checked against the lock. This is an independent hashing
+implementation result, not a Solidity oracle, adoption or settlement proof.
+
+Retained local oracle Makefile/probe/receipt/provenance:
+.work/validation/voucher-oracle/
+Probe SHA-256:
+f56a9c965a945f5a7a7b08cb9f6cf8a94e0fffb9acee4e398c040758aded993c
+Receipt SHA-256:
+af0a38bbf6ef1adae213091e4c4641b2e8205bf7b0f6a1b422b6599d037c33ee
+Makefile SHA-256:
+c7d141f9bd5330a039d6073fa446d3114ffa2c20cb4ff4cec71960fe55ba156e
+
+Version 0.2.0 is prepared in source and explicitly authorized for release by
+the user. No new public release, Pages publication or consumer runtime or
+deployment is claimed before the maintained publisher verifies success.
+Final frozen-source and downloaded-artifact identities will be recorded
+after publication; existing releases and tags remain unchanged.

@@ -11,6 +11,7 @@
       "invoiceBase64": "eyJwcm92aWRlciI6IjExcVlBWUt4Q3JmVlNfN1R5V1FIT2c3aGN2UGFwaU1scndJYWFQY0hVUm8iLCJwYXltZW50Ijp7ImFzc2V0IjoiZWlwMTU1OjEvc2xpcDQ0OjYwIiwiYW1vdW50IjoiNSJ9LCJiZXN0QmVmb3JlIjoyMDAwMDAzNjAwLCJiZW5lZmljaWFyeSI6IkFBRUNBd1FGQmdjSUNRb0xEQTBPRHhBUkVoTVVGUllYR0JrYUd4d2RIaDgiLCJzZXJ2aWNlIjp7ImZpeHR1cmVPbmx5Ijp0cnVlLCJhZGRyZXNzIjoiZml4dHVyZS0xQG1haWwuZXhhbXBsZS5pbnZhbGlkIn19",
       "invoiceHash": "0x202406015ed1fd80d74e5e2c8ff76ce7a0e7a92bc61d6234a1e8022f7702b294",
       "signatureBase64": "FXHojUVmmeG1j7h5dA/Zn5aZsmdSQTHso6/E7cktmERjzpKPCFaubvIfubooAG1jaR26+1fMlU7Qvrke5dMiDw==",
+      "voucherDigest": "0x3274bc212841e8e2df6e1292655a55b22258406950d219fe4178517999ca7f1a",
       "invoiceUtf8": "{\"provider\":\"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\",\"payment\":{\"asset\":\"eip155:1/slip44:60\",\"amount\":\"5\"},\"bestBefore\":2000003600,\"beneficiary\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"service\":{\"fixtureOnly\":true,\"address\":\"fixture-1@mail.example.invalid\"}}",
       "voucherDomain": {"name": "PayToPlay", "version": "2", "chainId": "1", "verifyingContract": "0x3333333333333333333333333333333333333333"},
       "voucher": {"customer": "0x1111111111111111111111111111111111111111", "channelId": "7", "cumulativeTotal": "5", "invoiceHash": "0x202406015ed1fd80d74e5e2c8ff76ce7a0e7a92bc61d6234a1e8022f7702b294"}
@@ -20,9 +21,19 @@
       "invoiceBase64": "eyJwcm92aWRlciI6IjExcVlBWUt4Q3JmVlNfN1R5V1FIT2c3aGN2UGFwaU1scndJYWFQY0hVUm8iLCJwYXltZW50Ijp7ImFzc2V0IjoiZWlwMTU1OjEvZXJjMjA6MHhhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiYW1vdW50IjoiNyJ9LCJiZXN0QmVmb3JlIjoyMDAwMDAzNjAwLCJiZW5lZmljaWFyeSI6IkFBRUNBd1FGQmdjSUNRb0xEQTBPRHhBUkVoTVVGUllYR0JrYUd4d2RIaDgiLCJzZXJ2aWNlIjp7ImZpeHR1cmVPbmx5Ijp0cnVlLCJhZGRyZXNzIjoiZml4dHVyZS0xQG1haWwuZXhhbXBsZS5pbnZhbGlkIn19",
       "invoiceHash": "0x476b8c634a6b410081c0608bc58dbfa18c4cef4a4add8d7534e40d83fc9bc9b3",
       "signatureBase64": "9R1I/trV+PO6pVpQ6jNgnFB3LKSccjTKyiexWWDKcHGHP37mIqZ1yUWcLAL2GIUbwymp2TRSJ9vKITWu3X+SDw==",
+      "voucherDigest": "0xdb5273c6a64fcfed026c7dfb40d59fc2191185ab5f65a10ce79d38a47fb75819",
       "invoiceUtf8": "{\"provider\":\"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\",\"payment\":{\"asset\":\"eip155:1/erc20:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"amount\":\"7\"},\"bestBefore\":2000003600,\"beneficiary\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"service\":{\"fixtureOnly\":true,\"address\":\"fixture-1@mail.example.invalid\"}}",
       "voucherDomain": {"name": "PayToPlay", "version": "2", "chainId": "1", "verifyingContract": "0x4444444444444444444444444444444444444444"},
       "voucher": {"customer": "0x1111111111111111111111111111111111111111", "channelId": "7", "cumulativeTotal": "7", "invoiceHash": "0x476b8c634a6b410081c0608bc58dbfa18c4cef4a4add8d7534e40d83fc9bc9b3"}
     }
-  ]
+  ],
+  "digestOracle": {
+    "implementation": "Independent Node/OpenSSL SHA-256/Ed25519 and cached viem 2.50.4 EIP-712 probe, adapted from dapp32 6c1b1279760dec1b43f56964a22c77e46b4e4f14 voucher helpers; no signed-invoice code imported.",
+    "inputSha256": "6e239bbe73007c7313ac17a5b0b39439c1dab5a62fb871e777005ae1ef92981b",
+    "probeSha256": "f56a9c965a945f5a7a7b08cb9f6cf8a94e0fffb9acee4e398c040758aded993c",
+    "receiptSha256": "af0a38bbf6ef1adae213091e4c4641b2e8205bf7b0f6a1b422b6599d037c33ee",
+    "image": "sha256:7266ae0983961960bc9cb7f11e833b6b533e4c41ecfcb9dd12b19883e09d81ce",
+    "consumedModuleManifestSha256": "f9e5b3ece89ad8bb2700076a49c71d5116331d1a63b377bd509302141847958b",
+    "scope": "Offline immutable prepared image, read-only inputs/root, no acquisition or installs. Cached dependency bytes fingerprinted before/after; npm archive integrity not independently verified. Checks include whitespace mutation controls. No Solidity execution, enrollment, payment admission, consumer adoption or settlement proof."
+  }
 }

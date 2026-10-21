@@ -2,7 +2,7 @@
 
 ## Status
 
-This is the draft release note for the implemented five-field invoice format. Source targets 0.2.0; final independent interoperability evidence and frozen package qualification are recorded in notes/007_five_field_implementation.txt. No 0.2.0 release has been published.
+This is the release-candidate note for the implemented five-field invoice format. Source targets 0.2.0; independent interoperability evidence and qualification status are recorded in notes/007_five_field_implementation.txt. Publication is explicitly authorized and must still verify final frozen-source artifacts before becoming public.
 
 ## Invoice format
 
@@ -27,6 +27,8 @@ Retain strict UTF-8/JSON, duplicate-member rejection, lossless nested numbers, t
 ## Readiness
 
 The adapted normative, adversarial and integration campaigns cover strict JSON, lossless service values including null and numeric scalars, all field signatures, legacy rejection and provider/key equality. Source-only tests do not establish installed-package or consumer proof; see the implementation record for completed checks and remaining evidence.
+
+Independent Node/OpenSSL checks verified both new byte/hash/base64/signature vectors and their whitespace-mutation controls. A separate cached-viem implementation supplied the new EIP-712 voucher digests. Exact image, input, module and receipt identities plus the cached-dependency integrity limitation are retained in the implementation record; these are no claim of Solidity execution or payment settlement.
 
 Before publication, qualify the final committed source snapshot, installed wheel/sdist artifacts, independent voucher vectors and downloaded release assets. Consumer reservation/admission coordination and explicit package adoption are separate prerequisites for production payment promises. Existing published artifacts are preserved.
 

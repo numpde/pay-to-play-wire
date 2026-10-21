@@ -74,7 +74,7 @@ class InvoiceTests(unittest.TestCase):
 
 
 class VectorTests(unittest.TestCase):
-    def test_installed_vectors_preserve_independent_byte_hash_and_voucher_expectations(self):
+    def test_retained_vectors_preserve_exact_bytes_hashes_signatures_and_voucher_linkage(self):
         vectors = json.loads(files("signed_invoice").joinpath("vectors/invoice.json").read_bytes())
         self.assertEqual(DOMAIN, vectors["invoicePrefixUtf8"].encode())
         self.assertEqual(["native", "erc20"], [case["name"] for case in vectors["cases"]])
