@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-The five-field design was agreed in the Mail workshop and confirmed by the user's JSON example on 2026-10-22. It supersedes the eleven- and twelve-field proposals. Implementation and release are paused for discussion. The obsolete candidate code, API guide and vector changes were removed; the maintained implementation remains at 0.1.1 with the existing wire version 2 grammar. Published 0.1.0 and 0.1.1 artifacts retain their original grammar and exact bytes. No five-field runtime, consumer adoption or release is established by this note.
+The five-field design was agreed in the Mail workshop and confirmed by the user's JSON example on 2026-10-22. It supersedes the eleven- and twelve-field proposals. Five-field implementation and release are paused for discussion. The obsolete candidate code, API guide and vector changes were removed; the maintained implementation continues to use the existing wire version 2 grammar. Published artifacts retain their original grammar and exact bytes. No five-field runtime, consumer adoption or release is established by this note.
 
 An invoice is the provider's signed offer: the service promised to a beneficiary for an explicit payment amount and asset, with a best-effort validity time. A payment authorization references the hash of that exact offer. Provider acceptance, payment collection and service fulfillment remain separate decisions and effects.
 
@@ -79,7 +79,7 @@ Retain the existing document limits of 16384 encoded bytes and container depth 1
 
 The five-field verification API must bind the encoded provider to the actual signature-verification key and remove the merchant UUID and key-alias arguments. Caller-owned trust and authorization still apply; successful cryptographic verification alone does not enroll the provider or accept the offer.
 
-Remove validate_payment_route and its public export when the five-field grammar is implemented: it reads chainId and paymentContract, which no longer exist. P2P owns selection and qualification of its authorized route and comparison with payment.asset. Do not keep an old-grammar path or introduce a route-comparison facade to preserve the former API. Update the package payload inventory, installed-artifact checks, API guide and consumer calls in the same cutover. The current 0.1.1 API stays unchanged while implementation is paused.
+Remove validate_payment_route and its public export when the five-field grammar is implemented: it reads chainId and paymentContract, which no longer exist. P2P owns selection and qualification of its authorized route and comparison with payment.asset. Do not keep an old-grammar path or introduce a route-comparison facade to preserve the former API. Update the package payload inventory, installed-artifact checks, API guide and consumer calls in the same cutover. The maintained API stays unchanged while five-field implementation is paused.
 
 Validation of the completed cutover must reject a signature by a different trusted provider than the key named in the document, reject legacy members, preserve arbitrary service values including null and lossless numeric scalars, and keep an otherwise well-formed bestBefore value independent of the clock. Installed-artifact qualification must exercise that same final grammar and API rather than retained old fixtures.
 

@@ -207,3 +207,15 @@ installed runtime. Protocol vectors remain unchanged interoperability evidence.
 make test passed all 43 repository checks, 46 invoice tests and fresh installs
 of both existing 0.1.0 wheel candidates. Installed-package qualification also
 passed after clarifying the development-module name and failure diagnostic.
+
+0.1.2 preparation, 2026-10-22
+----------------------------
+Maintenance release of the existing version 2 package, repository checks and
+reviewed design notes. No library runtime or interoperability-vector changes
+are included. The five-field format remains an unimplemented 0.2.0 design.
+
+Refreshed exact-version OSV queries before offline qualification. No matching
+advisories were returned for cryptography 50.0.2, cffi 2.1.1, pycparser 3.11 or
+Ruff 0.15.15. The setuptools 82.0.1 advisory and its alias remain the same
+Unicode manifest-exclusion issue reviewed above; this Linux build retains
+ASCII-only paths/rules, declared copied inputs and exact artifact inventories.

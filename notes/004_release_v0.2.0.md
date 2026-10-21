@@ -2,7 +2,7 @@
 
 ## Status
 
-This is the release note for the planned five-field invoice format. The design and two QA/QC passes are complete; implementation, interoperability vectors and package qualification are pending. The current package remains 0.1.1 with wire version 2. No 0.2.0 package or release has been published.
+This is the release note for the planned five-field invoice format. The design and two QA/QC passes are complete; implementation, interoperability vectors and package qualification are pending. The maintained implementation continues to use wire version 2. No 0.2.0 package or release has been published.
 
 ## Planned invoice format
 
