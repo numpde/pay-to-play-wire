@@ -1,21 +1,31 @@
-# 0.2.0 — unreleased design draft
+# 0.2.0 — draft release note
 
 ## Status
 
-The five-field design was agreed in the Mail workshop and confirmed by the user's JSON example on 2026-10-22. This supersedes the eleven- and twelve-field candidates. Implementation and release remain paused. The obsolete candidate code, API guide and vector changes were removed; the maintained implementation remains at 0.1.1 with the existing wire version 2 grammar. No five-field package has been built, validated or published. The existing published releases are unchanged.
+This is the release note for the planned five-field invoice format. The design and two QA/QC passes are complete; implementation, interoperability vectors and package qualification are pending. The current package remains 0.1.1 with wire version 2. No 0.2.0 package or release has been published.
 
-## Planned changes
+## Planned invoice format
 
-- Use exactly five top-level members: `provider`, `payment`, `bestBefore`, `beneficiary` and `service`.
-- Identify the provider and beneficiary by encoded public keys. The key representation remains to be fixed before implementation; provider trust and registration remain application responsibilities.
-- Bind the signature-verification key to the document's encoded provider and remove merchant UUID and key-alias verification arguments.
-- Put the explicit CAIP-19 asset identifier and base-unit integer-string amount inside `payment`. Asset syntax does not establish payment support or authorize a settlement route.
-- Treat `bestBefore` as best-effort offer validity expressed in Unix seconds. A provider may decline an earlier offer or consider a later one; this field is not a mandatory acceptance or fulfillment cutoff.
-- Preserve `service` as an opaque, provider-owned JSON value, including scalar or null values, within the retained strict UTF-8/JSON, 16384-byte and depth-16 document limits. The shared invoice grammar does not prescribe a product object schema.
-- Remove document version, merchant UUID, key alias, invoice ID, customer, channel, settlement contract, quoted payee and redemption deadline. The trusted signing context selects the grammar. P2P owns provider registration, authorized route and asset qualification, and payment-voucher admission.
-- Remove validate_payment_route and its public export during the five-field cutover; its signed chain and contract fields no longer exist. Update installed-artifact checks, package inventory, API documentation and consumer calls with the new API.
-- Retain SHA-256 of the caller's trusted domain bytes followed by exact verified document bytes as the sole invoice identity; never trust a client-supplied hash label. Ordinary Ed25519 signs that complete preimage directly. Select the actual trusted domain bytes for the new grammar before producing final vectors or publishing.
+The document contains exactly five top-level fields:
 
-## Work remaining
+- `provider`: the provider's encoded public key, which must match the signature-verification key. Applications establish its trust and authorization.
+- `payment`: the explicit CAIP-19 `asset` and base-unit integer-string `amount`.
+- `bestBefore`: best-effort offer validity in Unix seconds. Earlier receipt does not guarantee acceptance; later receipt does not require rejection. The codec imposes no clock-based acceptance or fulfillment cutoff.
+- `beneficiary`: the intended recipient's encoded public key, independently of the payer.
+- `service`: any provider-owned JSON value, including arrays, scalars and null. The shared codec does not interpret product semantics.
 
-The field-by-field rationale, the user's exact JSON example, encoding decisions and consumer lifecycle obligations are recorded in notes/005_invoice_design.txt. Fix those wire details before producing new bytes and independent interoperability vectors. Qualify a coherent committed source snapshot and downloaded release artifacts before publication; retain existing published tags and assets.
+## Planned breaking changes
+
+Remove the embedded version, merchant UUID, key alias, invoice ID, payer, channel, settlement contract, quoted payee and acceptance/redemption deadlines. The trusted signing context selects the grammar. Remove merchant/key-alias verification arguments and the `validate_payment_route` API. Applications own provider enrollment, settlement-route and asset qualification, admission, collection and fulfillment.
+
+The sole invoice identity remains SHA-256 of the caller's nonempty trusted domain bytes followed by the exact original document bytes. Ordinary Ed25519 signs that complete preimage directly. The library supplies no domain default, adds no delimiter and reconstructs no JSON for verification. A client-supplied hash label cannot establish invoice identity or authenticity.
+
+Retain strict UTF-8/JSON, duplicate-member rejection, lossless nested numbers, the 16384-byte document limit and container depth 16. Arbitrary service value kinds remain subject to those limits. Existing published tags, artifacts and document bytes remain unchanged.
+
+## Readiness
+
+The recorded design passed independent review, lint and 43 repository checks. These checks cover the notes and existing repository workflows; they do not qualify a five-field implementation, package or consumer integration.
+
+Before publication, settle key encoding, accepted asset forms, numeric bounds and trusted domain bytes; implement the complete API cutover; regenerate independent vectors; and qualify a committed source snapshot, installed wheel/sdist artifacts and downloaded release assets. Consumer reservation/admission coordination is a separate prerequisite for production payment promises.
+
+The complete design, exact JSON example and consumer responsibilities are recorded in notes/005_invoice_design.txt.
