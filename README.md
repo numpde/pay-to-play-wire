@@ -120,6 +120,6 @@ Both commands run Git/GitHub orchestration on the host with the
 operator's existing authentication; credentials never enter package containers.
 
 Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;
-source provenance and current validation limits are in
-`notes/010_wire_consolidation.txt`. Older notes preserve donor history and its
+source provenance is in `notes/010_wire_consolidation.txt`; current packaging
+qualification is in `notes/014_complete_default_installation.txt`. Older notes preserve donor history and its
 release evidence; they do not claim a `wire` release or consumer cutover.

@@ -7,7 +7,7 @@ title: pay-to-play-wire
 
 Produce and verify provider invoices carried as Ed25519 JSON Web Signatures and buyer authorizations carried as PayToPlay/2 EIP-712 vouchers. The Python package is `wire`. It owns the two wire profiles, parsing, signing, verification and interoperability vectors. Applications own provider and registered-signer authorization, service schemas, payment admission, storage, collection and fulfillment.
 
-The [0.5.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.5.0) provides uniform artifact interfaces and matching Pydantic adapters. It was built and qualified from frozen source `075e47ff75d73a3680e8863d0e13691a50a04670`; downloaded draft assets matched before publication. The preceding [0.4.0 consolidation](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.4.0) brought [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) and the qualified voucher implementation under one namespace. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
+The [0.6.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.6.0) includes both protocols and both adapters in the default installation. It was built and qualified from frozen source `be80276d38f80a2bade5df359c77797107672207`; downloaded draft assets matched before publication. The preceding [0.4.0 consolidation](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.4.0) brought [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) and the qualified voucher implementation under one namespace. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
 
 Install `wire` for both protocols and both Pydantic/OpenAPI adapters. There are no extras to select.
 
@@ -15,10 +15,10 @@ Install `wire` for both protocols and both Pydantic/OpenAPI adapters. There are 
 wire  # Invoice JWS, PayToPlay/2 vouchers and both Pydantic/OpenAPI adapters.
 ```
 
-This installation contract is new in the 0.6.0 candidate. The published 0.5.0 requirement below predates removal of the extras and is retained until 0.6.0 publication is verified:
+The immutable wheel requirement is:
 
 ```text
-wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.5.0/wire-0.5.0-py3-none-any.whl#sha256=2a62772e9edbfc236eb43d4619fa517d2575b21a8e656a13a1418130b5ef219d
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.6.0/wire-0.6.0-py3-none-any.whl#sha256=5f90763f703f4c408c2223458cf3d37980c0de844b0683ac87ced1202a4aedcd
 ```
 
 Acquire the wheel explicitly, verify its actual SHA-256, then install offline in the consumer's maintained environment. The release includes the sdist, pre-build source inventory, hash manifest and qualification logs. Import `wire.invoice`, `wire.voucher`, `wire.invoice.pydantic` or `wire.voucher.pydantic` directly. The root package does not eagerly import the protocol modules or adapters.

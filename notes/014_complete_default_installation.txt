@@ -25,3 +25,22 @@ Qualification and release receipts will be added after frozen-source publication
 Pre-commit lint and all 52 repository tests passed, including source-free package
 launcher arguments and the observed contained runtime posture. Frozen release
 qualification will run the full behavioral and installed-artifact campaigns.
+
+Frozen qualification and release
+make publish/release TAG=v0.6.0 completed from source
+be80276d38f80a2bade5df359c77797107672207. Lint, 52 repository tests,
+44 invoice tests, 18 voucher tests and both fresh full installations passed.
+Both wheel and sdist-derived wheel metadata declared all direct dependencies
+without extras, and both supplied invoice/voucher signing, verification and
+Pydantic operations under the ordinary wire requirement. Downloaded draft
+artifacts and both logs matched before public release. No old assets changed.
+https://github.com/numpde/pay-to-play-wire/releases/tag/v0.6.0
+SHA-256:
+wheel 5f90763f703f4c408c2223458cf3d37980c0de844b0683ac87ced1202a4aedcd
+sdist 9d199846ba5e80b2bc8913472b6987e0c714d139b65234c77df81c2a6f027da4
+source.json f6588c4e8ee520e7d45662eb8e6c30abb1249664e2376690264f382133166c9d
+sha256.json 02ecf7bb24ba993dbb3db86dd99a9cf1b5730778abcb8f0028ffb6e647743f9c
+Publication evidence: .work/publication.gAKqxxYf/.
+The anonymous HTTPS wheel download through explicit interface wlp1s0 matched
+the qualified wheel byte-for-byte. Repository checks passed again after adding
+the public release receipt and updating the guide's immutable install pin.
