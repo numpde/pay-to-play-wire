@@ -7,7 +7,15 @@ title: signed-invoice
 
 Produce and verify five-field invoices carried as Ed25519 JSON Web Signatures. The package owns payload grammar, exact JWS segments and signed-artifact identity. Applications own provider trust and authorization, service schemas, payment admission, storage, collection and fulfillment.
 
-Main prepares the breaking 0.3.0 JWS release. Published 0.2.0 uses its original domain-prefix signature and hash rules; its artifacts remain unchanged. This source accepts and emits only the new JWS profile. A package upgrade does not reinterpret stored legacy offers or migrate consumer policy.
+The [0.3.0 release](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) was qualified from frozen source `be92d1594540f82b73e3765833b42f15804e36d8`. Published 0.2.0 uses its original domain-prefix signature and hash rules; its artifacts remain unchanged. This source accepts and emits only the new JWS profile. A package upgrade does not reinterpret stored legacy offers or migrate consumer policy.
+
+The immutable base wheel requirement is:
+
+```text
+signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.3.0/signed_invoice-0.3.0-py3-none-any.whl#sha256=598e0bf346d41a517a788b0847635805b8ae068d194fba7cad43661d87a4729b
+```
+
+Acquire and verify the actual wheel explicitly, then install offline in the consumer's maintained environment. To declare optional adapter dependencies, use `signed-invoice[pydantic]` with the same URL and hash. The release also carries the sdist, hash manifest and qualification logs. Downloaded draft assets were verified before publication.
 
 ## Sign, preserve and verify an invoice
 

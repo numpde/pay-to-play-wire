@@ -78,7 +78,7 @@ Set `project.version` in `pyproject.toml` for the next release and commit the
 changes. Publish releases and documentation separately from a clean checkout:
 
 ```sh
-make publish/release TAG=v0.2.0
+make publish/release TAG=v0.3.0
 make publish/pages
 ```
 

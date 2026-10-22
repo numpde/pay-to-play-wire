@@ -181,6 +181,45 @@ Candidate lint, 43 repository checks, 41 invoice checks, independent Python/JS
 JOSE interop and source-free base/optional installed-artifact checks passed.
 An independent source reviewer found no concrete implementation defect; its
 one missing separate price/asset mutation proof was restored. Final frozen
-qualification and verified release identities will be recorded after publication.
+qualification and verified release identities are recorded below.
 No consumer deployment, admission, fulfillment, voucher or settlement proof is
 claimed by the JWS package qualification.
+
+0.3.0 publication
+-------------------
+Published through make publish/release TAG=v0.3.0 from clean frozen source:
+be92d1594540f82b73e3765833b42f15804e36d8
+Source tree:
+1f4c6458c03c70a3067db66743f547fd5bd434eb
+The frozen source passed lint, all 43 repository checks including live kernel
+containment, all 41 invoice tests, source-free checks of original and rebuilt
+wheels without Pydantic, then the separate hash-locked optional adapter check.
+
+Release:
+https://github.com/numpde/signed-invoice/releases/tag/v0.3.0
+Wheel SHA-256:
+598e0bf346d41a517a788b0847635805b8ae068d194fba7cad43661d87a4729b
+Sdist SHA-256:
+1ddf6ef704b07602cfc41bd3901ec8e663b8acfd7f5aacc7c9fa71e208a6b80d
+sha256.json SHA-256:
+ef5e0bbfe8a8f244b708f17bc2fd2298807b5d31cbcc1bd4be3a720ae32705cc
+Release build-log SHA-256:
+ed13a7412d9b145a6d470cccba3cef8ecf4d9ab8a8eb01d7fec25565df2d3b42
+Release test-log SHA-256:
+604b3ba640c95fbde6bdea66d58d3732006deb05abf78be18ea01c6e604ce6c0
+Final installed vector SHA-256 remains:
+a83eaebab9e17bd5320d29c17ea1d40398cae8715d9e1b90e5698adfb829dc2f
+
+Downloaded draft wheel, sdist and manifest identities matched the exact
+source-free qualification receipts, and both downloaded logs matched before
+the draft was made public. API inspection confirmed isDraft=false. Anonymous
+public HTTPS acquisition through explicitly selected wlp1s0 matched the verified
+downloaded wheel byte-for-byte. Existing tag object IDs and the 0.2.0 release
+asset IDs/hashes/sizes/timestamps matched their pre-publication captures.
+No prior published artifact was replaced.
+
+Local frozen source, downloaded assets, logs and publication receipts:
+.work/publication.pGsMwNmP/
+Both consumer owners received the final immutable wheel URL/hash, exact source
+revision, unchanged API and vector identity immediately after publication.
+Their integration and deployment qualification remain separately owned.
