@@ -59,3 +59,22 @@ observed live identity, network, mounts, capability and resource constraints.
 Documentation review checked the APIs against source and explicitly distinguishes
 parsing, schema projection and authentication. No deployment or settlement proof
 is claimed. Final frozen qualification and public receipts remain to be recorded.
+
+Final frozen qualification and release receipt
+make publish/release TAG=v0.5.0 completed successfully from committed source
+075e47ff75d73a3680e8863d0e13691a50a04670. All lint, 52 repository tests,
+44 invoice tests, 18 voucher tests and all eight installed dependency profiles
+passed from that snapshot, including the final adapter and digit-count edits.
+Draft artifacts and both qualification logs were downloaded and compared before
+the release became public. Existing 0.4.0 assets were not changed.
+https://github.com/numpde/pay-to-play-wire/releases/tag/v0.5.0
+SHA-256:
+wheel 2a62772e9edbfc236eb43d4619fa517d2575b21a8e656a13a1418130b5ef219d
+sdist 0c9d06b390519ad2a54345fb6492c1faf31b581b14292188af7ab38e710f3807
+source.json 3e2ae7ef476cd8f3770579eac7ab5234c3a6aaecf12b812ef62d92490293e15f
+sha256.json 90cd55c84ff93fdab0e7e1d6164085cbdaa822eee60a995bb7e186cf63c2adf1
+Local publication receipts: .work/publication.rmwyX83P/.
+The guide's install pin now names these verified published bytes.
+An anonymous HTTPS wheel download through the explicit wlp1s0 interface matched
+the qualified wheel byte-for-byte. Public release metadata reports isDraft=false.
+Repository checks passed again after adding the release receipt and final guide pin.
