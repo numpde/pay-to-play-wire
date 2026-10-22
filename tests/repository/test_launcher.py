@@ -14,9 +14,9 @@ import unittest
 from pathlib import Path
 
 INPUTS = (
-    "containers/invoice/Dockerfile",
-    "containers/invoice/Dockerfile.dockerignore",
-    "requirements/invoice.lock",
+    "containers/wire/Dockerfile",
+    "containers/wire/Dockerfile.dockerignore",
+    "requirements/wire.lock",
     "requirements/make.json",
     "tools/dependencies/wheels.py",
     "tools/ops/container_guard.py",
@@ -24,14 +24,14 @@ INPUTS = (
 IMAGE_ID = "sha256:" + "a" * 64
 
 
-class InvoiceLauncherTests(unittest.TestCase):
+class WireLauncherTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         for name in (
             *INPUTS,
-            "tools/ops/invoice.sh",
+            "tools/ops/wire.sh",
             "tools/ops/docker_client.sh",
             "tools/ops/inference_native.sh",
             "AGENTS.md",
@@ -44,13 +44,13 @@ class InvoiceLauncherTests(unittest.TestCase):
             destination = self.root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(name, destination)
-        for name in (".work/invoice", "bin"):
+        for name in (".work/wire", "bin"):
             (self.root / name).mkdir(parents=True, exist_ok=True)
         shutil.copytree("src", self.root / "src")
         shutil.copytree("tests", self.root / "tests")
         shutil.copytree("docs", self.root / "docs")
         shutil.copytree("notes", self.root / "notes")
-        self.record = self.root / ".work/invoice/admission"
+        self.record = self.root / ".work/wire/admission"
         self.record.write_text(
             IMAGE_ID
             + "\n"
@@ -101,7 +101,7 @@ esac
 
     def run_launcher(self, operation, *, additions=None):
         return subprocess.run(
-            ["bash", str(self.root / "tools/ops/invoice.sh"), operation],
+            ["bash", str(self.root / "tools/ops/wire.sh"), operation],
             cwd=self.root,
             env={
                 "PATH": str(self.root / "bin") + os.pathsep + os.defpath,
@@ -117,21 +117,24 @@ esac
         )
 
     def test_successful_dispatch_grants_only_offline_readonly_sources(self):
-        result = self.run_launcher("test/invoice")
-        self.assertEqual(0, result.returncode, msg=result.stderr)
-        args = self.trace.read_bytes().decode().split("\0")[:-1]
-        self.assertIn(IMAGE_ID, args)
-        self.assertEqual("none", args[args.index("--network") + 1])
-        self.assertIn("--read-only", args)
-        self.assertEqual("never", args[args.index("--pull") + 1])
-        self.assertIn("ALL", args)
-        mounts = [args[index + 1] for index, value in enumerate(args) if value == "--mount"]
-        self.assertTrue(mounts)
-        self.assertTrue(all(mount.endswith(",readonly") for mount in mounts))
-        self.assertTrue(all("docker.sock" not in mount and ".git" not in mount for mount in mounts))
-        self.assertFalse(any("dst=/workspace/notes," in mount for mount in mounts))
-        self.assertIn("discover", args)
-        self.assertIn("tests/invoice", args)
+        for campaign in ("invoice", "voucher"):
+            with self.subTest(campaign=campaign):
+                self.trace.unlink(missing_ok=True)
+                result = self.run_launcher("test/" + campaign)
+                self.assertEqual(0, result.returncode, msg=result.stderr)
+                args = self.trace.read_bytes().decode().split("\0")[:-1]
+                self.assertIn(IMAGE_ID, args)
+                self.assertEqual("none", args[args.index("--network") + 1])
+                self.assertIn("--read-only", args)
+                self.assertEqual("never", args[args.index("--pull") + 1])
+                self.assertIn("ALL", args)
+                mounts = [args[index + 1] for index, value in enumerate(args) if value == "--mount"]
+                self.assertTrue(mounts)
+                self.assertTrue(all(mount.endswith(",readonly") for mount in mounts))
+                self.assertTrue(all("docker.sock" not in mount and ".git" not in mount for mount in mounts))
+                self.assertFalse(any("dst=/workspace/notes," in mount for mount in mounts))
+                self.assertIn("discover", args)
+                self.assertIn("tests/" + campaign, args)
 
     def test_repository_checks_receive_readonly_release_notes(self):
         result = self.run_launcher("test/repository")
@@ -163,7 +166,7 @@ esac
         self.assertFalse(self.trace.exists())
 
     def test_changed_dependency_lock_is_rejected_before_engine_dispatch(self):
-        path = self.root / "requirements/invoice.lock"
+        path = self.root / "requirements/wire.lock"
         path.write_bytes(path.read_bytes() + b"\n# changed\n")
         result = self.run_launcher("test/invoice")
         self.assertEqual(2, result.returncode)
@@ -197,7 +200,7 @@ esac
         self.assertFalse(self.trace.exists())
 
     def test_build_admits_only_exact_engine_image_ids(self):
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         previous = self.record.read_bytes()
         for output, expected_status in (
             (IMAGE_ID, 0),
@@ -217,16 +220,16 @@ esac
                 self.assertEqual(previous, self.record.read_bytes())
 
     def test_failed_build_keeps_previous_admission(self):
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         previous = self.record.read_bytes()
         (self.root / "bin/docker").write_text("#!/bin/bash\nexit 23\n")
         result = self.run_launcher("build")
         self.assertEqual(23, result.returncode)
         self.assertEqual(previous, self.record.read_bytes())
-        self.assertEqual([], list((self.root / ".work/invoice").glob(".build.*")))
+        self.assertEqual([], list((self.root / ".work/wire").glob(".build.*")))
 
     def test_observed_image_metadata_must_match_exactly_before_execution_or_publication(self):
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         (self.root / "engine.trace.id").write_text(IMAGE_ID)
         previous = self.record.read_bytes()
         receipt = self.root / "observed-receipt"
@@ -260,7 +263,7 @@ esac
                 )
 
     def test_real_make_preserves_literal_network_interface_and_blocks_alias_shadowing(self):
-        launcher = self.root / "tools/ops/invoice.sh"
+        launcher = self.root / "tools/ops/wire.sh"
         launcher.write_text('printf "%s\\n" "$1" "${NETWORK_INTERFACE_INPUT-ABSENT}"; [[ ! -v NETWORK_INTERFACE ]]\n')
         sentinel = self.root / "expanded"
         literal = f"$(shell touch {sentinel})"
@@ -296,12 +299,13 @@ esac
 
     def test_printed_package_check_has_artifacts_and_no_source_import_mount(self):
         (self.root / ".work/dist").mkdir()
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         shutil.copyfile("tools/ops/package.py", self.root / "tools/ops/package.py")
         shutil.copyfile("requirements/runtime.lock", self.root / "requirements/runtime.lock")
         shutil.copyfile("requirements/pydantic.lock", self.root / "requirements/pydantic.lock")
+        shutil.copyfile("requirements/voucher.lock", self.root / "requirements/voucher.lock")
         result = subprocess.run(
-            ["bash", str(self.root / "tools/ops/invoice.sh"), "--print", "test/package"],
+            ["bash", str(self.root / "tools/ops/wire.sh"), "--print", "test/package"],
             cwd=self.root,
             capture_output=True,
             text=True,
@@ -317,7 +321,7 @@ esac
         self.assertFalse(self.trace.exists())
 
     def test_build_captures_complete_declared_inputs_and_excludes_private_canary(self):
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         (self.root / "engine.trace.id").write_text(IMAGE_ID)
         private = self.root / ".codex/private-canary"
         private.parent.mkdir()
@@ -342,7 +346,7 @@ esac
                 path.write_bytes(original)
 
     def test_build_uses_captured_bytes_when_live_input_changes(self):
-        (self.root / ".work/invoice/wheels").mkdir()
+        (self.root / ".work/wire/wheels").mkdir()
         (self.root / "engine.trace.id").write_text(IMAGE_ID)
         name = "tools/dependencies/wheels.py"
         live = self.root / name

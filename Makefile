@@ -7,7 +7,7 @@ override export NETWORK_INTERFACE_INPUT := $(if $(filter command line,$(origin N
 unexport TAG
 override export PUBLISH_TAG_INPUT := $(if $(filter command line,$(origin TAG)),$(value TAG))
 
-.PHONY: help prerequisites/check dependencies/download dependencies/check build/image build/verify package/build publish/release publish/pages test test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/package lint/check
+.PHONY: help prerequisites/check dependencies/download dependencies/check build/image build/verify package/build publish/release publish/pages test test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/voucher test/package lint/check
 
 .PHONY: vectors/show
 
@@ -27,23 +27,24 @@ help:
 	  'test/invoice             Run all invoice behavior campaigns.' \
 	  'test/invoice/normative   Check valid five-field invoices and exact-byte vectors.' \
 	  'test/invoice/adversarial Check malformed documents and cryptographic rejection.' \
-	  'test/invoice/integration Check detached signing and envelope composition.' \
+	  'test/invoice/integration Check JWS interoperability and the optional adapter.' \
+	  'test/voucher             Check voucher construction, signing and rejection.' \
 	  'test/package             Check installed wheel/sdist artifacts without source mounts.' \
 	  'lint/check               Check Python lint and formatting without writing.'
 
-test: lint/check test/repository test/invoice test/package
+test: lint/check test/repository test/invoice test/voucher test/package
 
-test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/package lint/check prerequisites/check build/verify package/build vectors/show:
-	bash tools/ops/invoice.sh $@
+test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/voucher test/package lint/check prerequisites/check build/verify package/build vectors/show:
+	bash tools/ops/wire.sh $@
 
 dependencies/download:
-	bash tools/ops/invoice.sh download
+	bash tools/ops/wire.sh download
 
 dependencies/check:
-	bash tools/ops/invoice.sh check
+	bash tools/ops/wire.sh check
 
 build/image:
-	bash tools/ops/invoice.sh build
+	bash tools/ops/wire.sh build
 
 publish/release publish/pages:
 	bash tools/ops/publish.sh $@

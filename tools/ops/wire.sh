@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Offline library workflow adapted from the recorded invoice/checker launchers.
+# Offline library workflow ported from the signed-invoice launcher.
 set -euo pipefail
 readonly repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly base='docker.io/library/python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c'
 readonly caller_uid="$(id -u)" caller_gid="$(id -g)"
 print_command=false
 if [[ $# -gt 0 && "$1" == --print ]]; then print_command=true; shift; fi
-if [[ $# != 1 ]]; then printf '%s\n' 'Usage: bash tools/ops/invoice.sh [--print] ACTION; see make help.' >&2; exit 2; fi
+if [[ $# != 1 ]]; then printf '%s\n' 'Usage: bash tools/ops/wire.sh [--print] ACTION; see make help.' >&2; exit 2; fi
 case "$1" in
-    download|check|build|prerequisites/check|build/verify|package/build|test/package|test/repository|test/invoice|test/invoice/normative|test/invoice/adversarial|test/invoice/integration|lint/check|vectors/show) ;;
+    download|check|build|prerequisites/check|build/verify|package/build|test/package|test/repository|test/invoice|test/invoice/normative|test/invoice/adversarial|test/invoice/integration|test/voucher|lint/check|vectors/show) ;;
     *) printf '%s\n' 'Cannot run library workflow: unknown action; see make help.' >&2; exit 2 ;;
 esac
 readonly action=$1
@@ -30,20 +30,20 @@ require_file() {
         printf 'Cannot use workflow input: expected a regular file without a symlink: %s\n' "$1" >&2; exit 2
     fi
 }
-for path in .work .work/invoice .work/invoice/wheels .work/dist; do
+for path in .work .work/wire .work/wire/wheels .work/dist; do
     directory=$repository_root/$path
     if [[ -L "$directory" || ( -e "$directory" && ( ! -d "$directory" || "$(stat -c '%u' "$directory")" != "$caller_uid" ) ) ]]; then
         printf 'Cannot prepare library workflow: expected an owned directory without symlinks: %s\n' "$path" >&2; exit 2
     fi
 done
-for path in containers containers/invoice requirements tools tools/ops tools/dependencies; do require_directory "$path"; done
-inputs=(containers/invoice/Dockerfile containers/invoice/Dockerfile.dockerignore requirements/invoice.lock requirements/make.json
+for path in containers containers/wire requirements tools tools/ops tools/dependencies; do require_directory "$path"; done
+inputs=(containers/wire/Dockerfile containers/wire/Dockerfile.dockerignore requirements/wire.lock requirements/make.json
     tools/dependencies/wheels.py tools/ops/container_guard.py)
 for path in "${inputs[@]}" tools/ops/docker_client.sh tools/ops/inference_native.sh; do require_file "$path"; done
 source_directories=(src tests tools containers requirements docs)
 if [[ "$action" == test/repository ]]; then source_directories+=(notes); fi
 case "$action" in
-    package/build|test/repository|test/invoice|test/invoice/*|build/verify|lint/check|vectors/show)
+    package/build|test/repository|test/invoice|test/invoice/*|test/voucher|build/verify|lint/check|vectors/show)
         for path in "${source_directories[@]}"; do
             require_directory "$path"
             if [[ -n $(find "$path" -type l -print -quit) ]]; then printf 'Cannot mount symlinked source below %s.\n' "$path" >&2; exit 2; fi
@@ -54,11 +54,12 @@ case "$action" in
         require_file tools/ops/package.py
         require_file requirements/runtime.lock
         require_file requirements/pydantic.lock
+        require_file requirements/voucher.lock
         require_directory .work/dist
-        require_directory .work/invoice/wheels
+        require_directory .work/wire/wheels
         ;;
 esac
-readonly state=$repository_root/.work/invoice
+readonly state=$repository_root/.work/wire
 common=(--init --pull never --read-only --user "$caller_uid:$caller_gid" --cap-drop ALL
     --security-opt no-new-privileges:true --cpus 2 --memory 512m --memory-swap 512m --pids-limit 64
     --tmpfs /tmp:rw,nosuid,nodev,noexec,size=64m --env PYTHONDONTWRITEBYTECODE=1
@@ -66,7 +67,7 @@ common=(--init --pull never --read-only --user "$caller_uid:$caller_gid" --cap-d
     --workdir /workspace)
 wheel_mounts=(--mount "type=bind,src=$repository_root/tools/dependencies/wheels.py,dst=/workspace/tools/dependencies/wheels.py,readonly"
     --mount "type=bind,src=$repository_root/tools/ops/container_guard.py,dst=/workspace/tools/ops/container_guard.py,readonly"
-    --mount "type=bind,src=$repository_root/requirements/invoice.lock,dst=/input/invoice.lock,readonly")
+    --mount "type=bind,src=$repository_root/requirements/wire.lock,dst=/input/wire.lock,readonly")
 wheel_mounts+=(--mount "type=bind,src=$repository_root/requirements/make.json,dst=/input/make.json,readonly")
 if [[ "$action" == download ]]; then
     bash "$repository_root/tools/ops/docker.sh" check-interface
@@ -74,7 +75,7 @@ if [[ "$action" == download ]]; then
     if "$print_command"; then proxy+=(--print); else mkdir -p -m 700 -- "$state"; fi
     exec "${proxy[@]}" run "${common[@]}" "${wheel_mounts[@]}" \
         --mount "type=bind,src=$state,dst=/output" "$base" \
-        python3 -B -m tools.dependencies.wheels download --lock /input/invoice.lock --make-declaration /input/make.json --output /output/wheels
+        python3 -B -m tools.dependencies.wheels download --lock /input/wire.lock --make-declaration /input/make.json --output /output/wheels
 fi
 source "$repository_root/tools/ops/docker_client.sh"
 source "$repository_root/tools/ops/inference_native.sh"
@@ -161,7 +162,7 @@ native() {
 }
 managed_run() {
     if "$print_command"; then run "${engine[@]}" run --rm "$@"; return; fi
-    if [[ -z "$scratch" ]]; then scratch=$(mktemp -d /tmp/invoice-workflow.XXXXXXXX); fi
+    if [[ -z "$scratch" ]]; then scratch=$(mktemp -d /tmp/wire-workflow.XXXXXXXX); fi
     rm -f -- "$scratch/run.cid" "$scratch/create.stdout"
     local create_status=0 candidate=
     inference_native 'library container creation' 30 stdio bash -eu -c '
@@ -187,13 +188,13 @@ if [[ "$action" == prerequisites/check ]]; then
     exit
 fi
 if [[ "$action" == check || "$action" == build ]]; then
-    require_directory .work/invoice/wheels
+    require_directory .work/wire/wheels
     managed_run --network none "${common[@]}" "${wheel_mounts[@]}" \
         --mount "type=bind,src=$state/wheels,dst=/dependencies,readonly" "$base" \
-        python3 -B -m tools.dependencies.wheels check --lock /input/invoice.lock --make-declaration /input/make.json --output /dependencies
+        python3 -B -m tools.dependencies.wheels check --lock /input/wire.lock --make-declaration /input/make.json --output /dependencies
     if [[ "$action" == check ]]; then exit; fi
     if "$print_command"; then scratch=$state/.build.PRINT; else
-        if [[ -z "$scratch" ]]; then scratch=$(mktemp -d /tmp/invoice-build.XXXXXXXX); fi
+        if [[ -z "$scratch" ]]; then scratch=$(mktemp -d /tmp/wire-build.XXXXXXXX); fi
         mkdir -p -- "$scratch/context" "$scratch/dependencies"
         for path in "${inputs[@]}"; do
             mkdir -p -- "$scratch/context/$(dirname -- "$path")"
@@ -202,17 +203,17 @@ if [[ "$action" == check || "$action" == build ]]; then
         cp -a -- "$state/wheels/." "$scratch/dependencies/"
         managed_run --network none "${common[@]}" \
             --mount "type=bind,src=$scratch/context/tools,dst=/workspace/tools,readonly" \
-            --mount "type=bind,src=$scratch/context/requirements/invoice.lock,dst=/input/invoice.lock,readonly" \
+            --mount "type=bind,src=$scratch/context/requirements/wire.lock,dst=/input/wire.lock,readonly" \
             --mount "type=bind,src=$scratch/context/requirements/make.json,dst=/input/make.json,readonly" \
             --mount "type=bind,src=$scratch/dependencies,dst=/dependencies,readonly" "$base" \
-            python3 -B -m tools.dependencies.wheels check --lock /input/invoice.lock --make-declaration /input/make.json --output /dependencies
+            python3 -B -m tools.dependencies.wheels check --lock /input/wire.lock --make-declaration /input/make.json --output /dependencies
         (cd -- "$scratch/context"; sha256sum -- "${inputs[@]}") > "$scratch/inputs"
         input_id=$(sha256sum "$scratch/inputs" | cut -d ' ' -f1)
     fi
     if "$print_command"; then input_id=PRINT; fi
     native 'offline tool image build' 600 "${engine[@]}" build --builder default --pull=false --network=none --platform linux/amd64 \
-        --label "io.signed-invoice.inputs=$input_id" --build-context "dependencies=$scratch/dependencies" \
-        --iidfile "$scratch/image-id" -f "$scratch/context/containers/invoice/Dockerfile" "$scratch/context"
+        --label "io.pay-to-play-wire.inputs=$input_id" --build-context "dependencies=$scratch/dependencies" \
+        --iidfile "$scratch/image-id" -f "$scratch/context/containers/wire/Dockerfile" "$scratch/context"
     if "$print_command"; then scratch=; exit; fi
     if [[ ! -f "$scratch/image-id" || -L "$scratch/image-id" || $(stat -c '%s' "$scratch/image-id") -gt 72 ]]; then
         printf '%s\n' 'Cannot publish tool image: build returned a missing or oversized image ID record.' >&2; exit 2
@@ -223,7 +224,7 @@ if [[ "$action" == check || "$action" == build ]]; then
     }; then printf '%s\n' 'Cannot publish tool image: build returned an invalid immutable image ID.' >&2; exit 2; fi
     native 'built tool image inspection' 30 bash -eu -c '
         output=$1; shift; umask 077; ulimit -f 4; exec "$@" > "$output"
-    ' bash "$scratch/observed" "${engine[@]}" image inspect --format '{{.Id}} {{index .Config.Labels "io.signed-invoice.inputs"}}' "$image_id"
+    ' bash "$scratch/observed" "${engine[@]}" image inspect --format '{{.Id}} {{index .Config.Labels "io.pay-to-play-wire.inputs"}}' "$image_id"
     if ! cmp -s -- "$scratch/observed" <(printf '%s %s\n' "$image_id" "$input_id"); then
         printf '%s\n' 'Cannot publish tool image: observed image identity or input label differs.' >&2; exit 2
     fi
@@ -246,7 +247,7 @@ if ! "$print_command"; then
     scratch=$(mktemp -d /tmp/image-admission.XXXXXXXX)
     native 'prepared tool image inspection' 30 bash -eu -c '
         output=$1; shift; umask 077; ulimit -f 4; exec "$@" > "$output"
-    ' bash "$scratch/observed" "${engine[@]}" image inspect --format '{{.Id}} {{index .Config.Labels "io.signed-invoice.inputs"}}' "$image_id"
+    ' bash "$scratch/observed" "${engine[@]}" image inspect --format '{{.Id}} {{index .Config.Labels "io.pay-to-play-wire.inputs"}}' "$image_id"
     if ! cmp -s -- "$scratch/observed" <(printf '%s %s\n' "$image_id" "$input_id"); then
         printf '%s\n' 'Cannot use tool image: observed image identity or input label differs.' >&2; exit 2
     fi
@@ -261,8 +262,9 @@ case "$action" in
             --mount "type=bind,src=$repository_root/.work/dist,dst=/artifacts,readonly"
             --mount "type=bind,src=$repository_root/requirements/runtime.lock,dst=/input/runtime.lock,readonly"
             --mount "type=bind,src=$repository_root/requirements/pydantic.lock,dst=/input/pydantic.lock,readonly"
+            --mount "type=bind,src=$repository_root/requirements/voucher.lock,dst=/input/voucher.lock,readonly"
             --mount "type=bind,src=$state/wheels,dst=/dependencies,readonly")
-        managed_run --network none "${common[@]}" --tmpfs /runtime:rw,nosuid,nodev,exec,size=128m \
+        managed_run --network none "${common[@]}" --tmpfs /runtime:rw,nosuid,nodev,exec,size=256m \
             "${mounts[@]}" "$image_id" python3 -B -m tools.ops.package check
         ;;
     *)
@@ -284,6 +286,7 @@ case "$action" in
             test/repository) command=(python3 -B -m unittest discover -s tests/repository -v) ;;
             test/invoice) command=(python3 -B -m unittest discover -s tests/invoice -v) ;;
             test/invoice/*) command=(python3 -B -m unittest discover -s "tests/invoice/${action##*/}" -v) ;;
+            test/voucher) command=(python3 -B -m unittest discover -s tests/voucher -v) ;;
         esac
         managed_run --network none "${common[@]}" --env PYTHONPATH=/workspace/src "${mounts[@]}" "$image_id" "${command[@]}"
         if [[ "$action" == package/build ]] && ! "$print_command"; then

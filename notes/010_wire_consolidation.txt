@@ -1,0 +1,164 @@
+pay-to-play-wire consolidation — source and qualification record
+
+Purpose and boundary
+
+The repository is pay-to-play-wire; the Python distribution and namespace are
+wire, version 0.4.0. wire.invoice owns the existing five-field Ed25519 JWS
+profile. wire.voucher owns the existing fixed PayToPlay/2 EIP-712 profile.
+Applications retain trust discovery, registered-position authorization,
+invoice/voucher correspondence, channel policy, persistence and payment effects.
+The root namespace has no eager optional imports or compatibility reexports.
+
+Copy provenance and deliberate adaptations
+
+Copied the committed signed-invoice tree at
+73ef10c09591485ffda491a9851bea844332654a using git archive, preserving its source,
+tests, container, acquisition, process-retirement and publication owners.
+Its published 0.3.0 source is be92d1594540f82b73e3765833b42f15804e36d8;
+the later donor HEAD records the release and Pages guidance. Historical notes
+001–009 retain their original names and historical claims, not wire evidence.
+
+Copied signed-voucher source, vectors, protocol tests and runtime lock from
+589f7bb9dca2b4de380b9800d8a63a994910c078. The voucher backend is eth-account
+0.14.0 with direct eth-keys 0.8.0 and eth-utils 6.0.0 imports. Its ordered
+profile and independent digest expectations come from dapp32 PayToPlay/2;
+the donor's notes/001_profile_and_workflow.txt records contract provenance and
+the prior local qualification limits. Its wheel SHA-256 is
+cedeea61adae638fee82c172ac0ca150304b7d8d7313bb24afa3c89829071172.
+
+Adaptations are namespace relocation, one wire distribution, explicit pydantic
+and voucher extras, shared installed vectors, unified lock/depot, workflow
+names and labels, source-derived package inventory, and installed checks for
+each consumer dependency selection. No invoice profile literal, payload rule,
+signature input, hash, voucher schema, domain, digest or trust rule was changed.
+The sdist includes the complete public docs tree, including its Pages config
+and revision marker, so its contents match the independently captured inputs.
+The inherited application/vnd.signed-invoice.v1+json is signed protocol data;
+it deliberately does not follow the repository rename.
+
+Ported the invoice toolchain rather than merging two infrastructure scaffolds.
+requirements/wire.lock combines the exact donor tool closures with duplicate
+packages removed; base runtime.lock and pydantic.lock are unchanged. The copied
+voucher.lock is the exact donor runtime closure. Ethereum brings Pydantic
+transitively. No new dependency versions or independent crypto implementation
+were introduced. The old donor reviews were performed on 2026-10-22; recheck
+exact-version advisories before installing this candidate's prepared image.
+Copied depot bytes are not admitted until make dependencies/check succeeds.
+
+Best practices retained
+
+Make help requires no prerequisites. Acquisition with a command-line interface,
+offline byte verification, image preparation, package builds, checks, release
+and Pages remain explicit separate actions. The maintained checks use bounded
+nonroot offline containers with immutable admitted images, read-only exact
+inputs/root, dropped capabilities, no new privileges and no credential/socket
+mounts. Failed native process retirement retains evidence rather than guessing
+cleanup succeeded. Host orchestration owns GitHub credentials and external
+publication. Release qualification captures a committed source snapshot and
+verifies downloaded draft assets before publication. Pages proves the live
+source revision. Published historical assets are never replaced.
+
+Packaging checks derive runtime members from source.json, captured independently
+before backend execution, compare source/wheel/rebuilt payload bytes, and install both wheels
+without source mounts. Independent environments exercise base, pydantic,
+voucher and both extras so prior installs cannot conceal missing closure.
+Meaningful tests retain all donor rejection scenarios and add an actual
+invoice-to-voucher handoff with distinct provider, deployment and signer trust.
+Consumer edits belong to their owners; no consumer cutover is claimed here.
+
+Verification and qualification (2026-10-22)
+
+Host cmp verified every relocated invoice Python file and voucher.py exactly
+matches its donor bytes. Both vector resources are byte-identical to the donors:
+invoice.json SHA-256 a83eaebab9e17bd5320d29c17ea1d40398cae8715d9e1b90e5698adfb829dc2f;
+voucher.json SHA-256 edbb7f73b8157871a360aedee4f1463de1825c2246c50a852120bd9b4876100c.
+Behavior campaigns pin those immutable baseline identities rather than
+regenerating expectations after relocation. The voucher vector's historical
+invoice hashes remain opaque fixtures, not current JWS offer identities.
+The composed scenario uses the current invoice resource and its complete hash.
+The voucher donor vectors contain expected digests, not expected signature or
+transport bytes. A separate executed donor-wheel comparison below supplies
+that runtime evidence without changing the authoritative vector resource.
+
+make help and bash -n for all maintained launchers/publication fixtures passed.
+Two final independent read-only audits found no new actionable source findings
+after the source inventory and documentation inclusion corrections.
+Initial Docker and Git writes were blocked by the session sandbox; escalation
+was then enabled by the user. The initialized checkout was seeded from
+.work/invoice-history.bundle using fetch and mixed reset, preserving all source
+edits and the donor main history and published tags. Donors were not mutated.
+
+Before image installation, exact OSV queries reviewed all 29 locked package
+versions. The only matched issue was setuptools 82.0.1
+GHSA-h35f-9h28-mq5c / PYSEC-2026-3447 (Unicode-normalization exclusion bypass).
+The Linux build uses ASCII input paths and ASCII MANIFEST rules, and independently
+compares the complete sdist input inventory; the advisory's triggering condition
+is absent. Primary advisory: https://github.com/advisories/GHSA-h35f-9h28-mq5c.
+The exact query/results and full advisory are retained under .work/validation/.
+The first query accidentally included lock continuation backslashes in versions;
+it was rejected as evidence and retained with an invalid-continuations suffix.
+The corrected exact versions, rather than those malformed query results, governed
+the review. No installation occurred until that review completed.
+
+make prerequisites/check and make dependencies/check passed. make build/image
+prepared and admitted sha256:bc4a9ad6dc330de0ed40eb329b4b2220048d60a29aeecb7cc1e937867426da30
+offline, using the captured lock and inputs; .work/wire/admission records their
+hashes. Docker 29.9.2 uses the inherited pinned CPython 3.12.12 Linux amd64 base.
+
+make lint/check passed after one manual formatting correction. The maintained
+containers passed all 50 repository workflow checks, 42 invoice tests and 13
+voucher tests. make package/build succeeded. make test/package passed both the
+original wheel and the wheel rebuilt from its sdist in eight source-free fresh
+environments: base, pydantic, voucher and both extras for each wheel. Base imports
+exclude Pydantic/Ethereum; selected extras pass installed metadata/origin/resource,
+strict adapter, exact JWS identity and trusted voucher domain/signer checks.
+After independent review, each environment installs the candidate with its real
+selected extras in the same offline --require-hashes pip resolution as its locked
+closure. A separate preinstall plus --no-deps wheel step is no longer used.
+The corrected eight-profile run passed; an added adapter contract probe confirms
+structural parsing accepts a well-formed altered signature while explicit
+trusted-key verification rejects it. The invoice campaign now contains 43 tests.
+Logs are retained as .work/validation/{repository,protocol,package-build,package-test}.log.
+The final selected-extra check is .work/validation/package-test-extras.log;
+the added adapter probe passed in .work/validation/integration-final.log.
+
+The established real JavaScript jose 6.2.13 probe was copied and rerun against
+the relocated invoice resource. It verified and exactly regenerated both flattened
+and compact JWS artifacts, including full signed identities and mutation controls.
+Archive SHA512 and all extracted package bytes were verified before execution.
+Its maintained Make lane ran the prepared immutable Node image offline, nonroot,
+read-only and bounded; no consumer source or application code was imported.
+Receipt: .work/validation/interop/jose/qualified-receipt.txt. Original oracle
+acquisition/probe provenance remains notes/008_jws_profile.txt and the copied
+oracle provenance.txt; this run did not reacquire or install dependencies.
+
+A separate offline migration probe imported package modules from the exact donor
+and current wheel archives, checking their actual import origins. For two
+historical vectors and both current invoice hashes it compared typedData,
+deterministic signature, digest and to_json bytes exactly; all matched. Direct
+wheel imports prove behavior of those wheel bytes, not fresh installation;
+the eight-profile lane above supplies the independent installation evidence.
+
+The copied dapp32 viem oracle then independently hashed, recovered and exactly
+regenerated all four voucher signatures and rejected changed deployment/hash
+bindings. Node 24.22.0 and viem 2.50.4 ran in prepared image
+sha256:7266ae0983961960bc9cb7f11e833b6b533e4c41ecfcb9dd12b19883e09d81ce.
+Its read-only cached dependency lock SHA-256 is
+1fbcf3976d458a5b6eaee0eb61345670d9b23a285689b25ac689e89dc6810d60;
+the complete dependency-tree fingerprint was unchanged before/after execution:
+14a40582878640626f1cdd9023624d36abfbbfd11c0219dc3cc1d42a9019e2dd (12392 files).
+These declared cached bytes are independent interoperability inputs, not proof
+of package-manager acquisition integrity or deployed-chain behavior.
+
+The migration probes and exact receipts are retained under
+.work/validation/interop/voucher. Makefile SHA-256
+5640564f5d36f84404f6a94c35fe5696f11ce3a52fe4e748bfacfa17c9660f52;
+baseline.py 69419ad513536fcfd46a1025ef3be22150c21a18fb483437a3437f8354d89221;
+voucher.cjs e8e67601b35ee30bbb9e8ba87c251aec7459c8ab30189242f32e178f0b48585d;
+baseline.json ee99fc25f3c00130f075cbdf648c3de6a94a30c9fbfd1850f787b61596ae4664;
+cross-language.json af9204e4e92ecb2cd92311e7fe1a1363a3c6da49aa18c32b2d1bc8af1a3baa1a.
+No consumer source, dependency tree or lock was modified by these probes.
+
+Frozen-source release qualification and publication remain a separate final gate.
+No public wire release, live Pages or consumer deployment is claimed by these
+local checks. Historical signed-invoice assets remain at their original URLs.

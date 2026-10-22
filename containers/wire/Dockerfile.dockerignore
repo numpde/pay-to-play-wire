@@ -1,11 +1,11 @@
 **
 !requirements/
-!requirements/invoice.lock
+!requirements/wire.lock
 !requirements/make.json
 !containers/
-!containers/invoice/
-!containers/invoice/Dockerfile
-!containers/invoice/Dockerfile.dockerignore
+!containers/wire/
+!containers/wire/Dockerfile
+!containers/wire/Dockerfile.dockerignore
 !tools/
 !tools/dependencies/
 !tools/dependencies/wheels.py

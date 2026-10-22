@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Simulate package qualification only; publication tests exercise the real host owner.
+set -euo pipefail
+printf 'make %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
+[[ $# == 4 && $1 == --no-print-directory && $2 == -C ]] || exit 97
+artifacts=$3/.work/dist
+case "$4" in
+    package/build)
+        mkdir -- "$artifacts"
+        printf 'qualified wheel\n' > "$artifacts/wire-0.1.0-py3-none-any.whl"
+        printf 'qualified sdist\n' > "$artifacts/wire-0.1.0.tar.gz"
+        printf '{"captured":"source"}\n' > "$artifacts/source.json"
+        printf '{"fixture":"manifest"}\n' > "$artifacts/sha256.json" ;;
+    test)
+        for name in wire-0.1.0-py3-none-any.whl wire-0.1.0.tar.gz source.json sha256.json; do
+            printf 'QUALIFIED_SHA256 %s %s\n' "$(sha256sum "$artifacts/$name" | cut -d ' ' -f1)" "$name"
+        done ;;
+    *) exit 97 ;;
+esac

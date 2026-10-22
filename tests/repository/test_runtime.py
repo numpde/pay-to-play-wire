@@ -2,7 +2,7 @@
 
 Port of all eight RuntimePostureTests at
 https://github.com/numpde/magnet-deploy/blob/2d4ee50b0359e71900fce9289ea01f46d0f41249/repository_checks/test_container_posture.py#L18
-Identity and numeric resources follow tools/ops/invoice.sh: caller ownership,
+Identity and numeric resources follow tools/ops/wire.sh: caller ownership,
 512 MiB, two CPUs, 64 PIDs and zero swap. The launcher injects expected identity;
 reading the process's own UID as the expected value would erase this proof.
 Installed-artifact isolation has its own source-free package test lane.
@@ -73,7 +73,7 @@ class RuntimePostureTests(unittest.TestCase):
         self.assertEqual(2 * period, quota, msg="CPU quota differs from the maintained two-CPU grant.")
 
     def test_source_is_visible_but_cannot_be_written(self):
-        source = Path("/workspace/src/signed_invoice/codec.py")
+        source = Path("/workspace/src/wire/invoice/codec.py")
         self.assertTrue(source.is_file())
         with self.assertRaises(OSError):
             with source.open("ab"):

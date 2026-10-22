@@ -1,9 +1,12 @@
-# signed-invoice
+# pay-to-play-wire
 
-**[Documentation — GitHub Pages](https://numpde.github.io/signed-invoice/)** · [Documentation source](docs/index.md)
+[Protocol and API documentation](docs/index.md)
 
-Development and operations for the Python provider-invoice library. Protocol,
-API and consumer guidance live in the documentation above.
+Development and operations for `wire`, the shared invoice JWS and PayToPlay/2
+voucher package. The base provides `wire.invoice`; extras `pydantic` and
+`voucher` provide the actual adapter and Ethereum backend. Import
+`wire.invoice.pydantic` and `wire.voucher` explicitly. The package owns wire
+rules; applications own authorization, policy, persistence and payment effects.
 
 ## Development
 
@@ -46,6 +49,7 @@ make test/repository
 make test/invoice/normative
 make test/invoice/adversarial
 make test/invoice/integration
+make test/voucher
 make test/package
 make vectors/show
 ```
@@ -58,16 +62,23 @@ new list items and fenced code blocks retain their structural line breaks.
 `test/package` consumes previously built artifacts without mounting source. It
 captures and verifies the artifact bytes, rebuilds a wheel from the sdist offline,
 and checks both wheels in a fresh contained environment. The checks cover import
-origin, metadata, dependencies, payload, resources and JWS operations. It proves
-the core works without Pydantic, then installs the locked optional adapter closure
-offline and checks its strict JSON, schema and serialization behavior.
+origin, metadata, dependencies, payload, resources, JWS and voucher operations.
+Fresh environments for each wheel and dependency selection prove base imports
+without Pydantic/Ethereum and exercise each optional integration independently.
+The voucher extra brings Pydantic transitively; the base does not.
 
 ## Artifacts and releases
 
-`make package/build` writes one wheel, one sdist and `sha256.json` to
+`make package/build` writes one wheel, one sdist, `source.json` and `sha256.json` to
 `.work/dist/`. It requires an empty output directory. Retain or move previous
 artifacts explicitly before rebuilding. Failed operations report retained
 evidence; confirm owned-process/container cleanup before retrying.
+
+`source.json` records paths and SHA-256 values captured before the build backend
+runs. The source-free checker compares both distributions against that record,
+so omitting the same runtime file from both archives cannot pass by agreement.
+The hash manifest covers the wheel, sdist and source inventory; publication
+verifies all four downloaded artifacts as well as the qualification logs.
 
 GitHub tags name releases. Consumers pin the source commit and verify the actual
 wheel hash; a tag name alone does not make bytes immutable. Release assets allow
@@ -78,7 +89,7 @@ Set `project.version` in `pyproject.toml` for the next release and commit the
 changes. Publish releases and documentation separately from a clean checkout:
 
 ```sh
-make publish/release TAG=v0.3.0
+make publish/release TAG=v0.4.0
 make publish/pages
 ```
 
@@ -106,4 +117,6 @@ Both commands run Git/GitHub orchestration on the host with the
 operator's existing authentication; credentials never enter package containers.
 
 Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;
-source provenance and validation records are in `notes/001_extraction.txt`.
+source provenance and current validation limits are in
+`notes/010_wire_consolidation.txt`. Older notes preserve donor history and its
+release evidence; they do not claim a `wire` release or consumer cutover.

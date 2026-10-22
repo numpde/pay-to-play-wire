@@ -2,12 +2,33 @@
 set -euo pipefail
 printf 'gh %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
 case "$1 $2" in
-    'repo view') printf 'numpde/signed-invoice\n' ;;
+    'repo view') printf 'numpde/pay-to-play-wire\n' ;;
     'api --hostname')
-        if [[ $PUBLISH_TEST_MODE == unknown ]]; then
+        if [[ $PUBLISH_TEST_MODE == unknown || $PUBLISH_TEST_MODE == publish || $PUBLISH_TEST_MODE == corrupt-source ]]; then
             printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
             exit 1
         fi
         printf 'HTTP/2.0 200 OK\r\n\r\n{"tag_name":"v0.1.0"}\n' ;;
+    'release create')
+        [[ $PUBLISH_TEST_MODE == publish || $PUBLISH_TEST_MODE == corrupt-source ]] || exit 97
+        mkdir -- "$PUBLISH_TEST_TRACE.uploads"
+        for argument in "$@"; do
+            case "$argument" in
+                */wire-0.1.0-py3-none-any.whl|*/wire-0.1.0.tar.gz|*/source.json|*/sha256.json|*/release-build.log|*/release-test.log)
+                    cp -- "$argument" "$PUBLISH_TEST_TRACE.uploads/" ;;
+            esac
+        done ;;
+    'release download')
+        while [[ $# -gt 0 ]]; do
+            if [[ $1 == --dir ]]; then
+                mkdir -- "$2"
+                cp -- "$PUBLISH_TEST_TRACE.uploads/"* "$2/"
+                if [[ $PUBLISH_TEST_MODE == corrupt-source ]]; then printf 'changed\n' >> "$2/source.json"; fi
+                exit
+            fi
+            shift
+        done
+        exit 97 ;;
+    'release edit') exit 0 ;;
     *) exit 97 ;;
 esac

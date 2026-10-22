@@ -7,8 +7,8 @@ require_container()
 import json
 import unittest
 
-from signed_invoice import InvoiceError, JsonNumber, decode_invoice, encode_invoice, sign_invoice, verify_invoice
 from tests.helpers.invoices import BENEFICIARY, invoice_fields, signing_key
+from wire.invoice import InvoiceError, JsonNumber, decode_invoice, encode_invoice, sign_invoice, verify_invoice
 
 
 class InvoiceCodecTests(unittest.TestCase):

@@ -97,3 +97,38 @@ class PublicationTests(unittest.TestCase):
         self.assertNotIn("git archive", calls)
         self.assertNotIn("git push", calls)
         self.assertEqual(1, len(list((self.root / ".work").glob("publication.*"))))
+
+    def test_source_inventory_download_is_verified_before_draft_publication(self):
+        state = self.root / ".work/wire"
+        (state / "wheels").mkdir(parents=True)
+        (state / "admission").write_text("publication fixture admission\n")
+        result = self.run_publisher("publish")
+        self.assertEqual(0, result.returncode, msg=result.stderr)
+        uploads = Path(str(self.trace) + ".uploads")
+        self.assertEqual(
+            {
+                "wire-0.1.0-py3-none-any.whl",
+                "wire-0.1.0.tar.gz",
+                "source.json",
+                "sha256.json",
+                "release-build.log",
+                "release-test.log",
+            },
+            {path.name for path in uploads.iterdir()},
+        )
+        calls = self.trace.read_text()
+        self.assertLess(calls.index("gh release download"), calls.index("gh release edit"))
+        self.assertIn("--draft=false", calls)
+
+    def test_changed_downloaded_source_inventory_keeps_release_draft(self):
+        state = self.root / ".work/wire"
+        (state / "wheels").mkdir(parents=True)
+        (state / "admission").write_text("publication fixture admission\n")
+        result = self.run_publisher("corrupt-source")
+        self.assertEqual(2, result.returncode, msg=result.stderr)
+        self.assertIn("downloaded bytes differ from the qualified artifact", result.stderr)
+        calls = self.trace.read_text()
+        self.assertIn("gh release create", calls)
+        self.assertIn("gh release download", calls)
+        self.assertNotIn("gh release edit", calls)
+        self.assertEqual(1, len(list((self.root / ".work").glob("publication.*"))))

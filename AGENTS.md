@@ -1,7 +1,8 @@
-# signed-invoice
+# pay-to-play-wire
 
-Own the shared invoice wire grammar, exact-byte hash/signature/envelope
-rules. Applications own payment-route qualification, key trust, product
+Own the invoice JWS and fixed PayToPlay/2 voucher wire profiles, their parsing,
+signing, verification and installed interoperability vectors. Applications own
+payment-route qualification, key trust and registered signer authorization, product
 schemas, persistence, consent, admission, fulfillment and settlement.
 
 Copy established owners from the recorded source repositories before inventing replacements.
@@ -9,6 +10,9 @@ Record the source revision and deliberate adaptations. Preserve original bytes
 and distinct rejection scenarios. Require the fixed Ed25519 JWS protected profile;
 applications supply trusted provider keys and own their authorization. Preserve
 carried segments and hash the complete compact signed artifact. No legacy domains.
+Voucher verification requires a caller-supplied trusted deployment domain and
+signer. Preserve the EIP-712 ordered schema, digest and contract signature rules.
+No RPC, key registry, secret custody or purchase policy belongs in this package.
 
 Make is the supported interface; help is the default and needs no prerequisites.
 Run all project Python, lint, tests, builds and packaging inside the maintained
@@ -30,10 +34,10 @@ read-only exact inputs/root, dropped capabilities, no new privileges and bounded
 resources. Do not mount credentials, engine sockets, private checkout state or
 devices. Validate paths/ownership and retain evidence when cleanup is uncertain.
 
-Use src/signed_invoice; tests/invoice for normative/adversarial/integration
+Use src/wire/invoice and src/wire/voucher.py; tests/invoice and tests/voucher for normative/adversarial/integration
 campaigns, tests/repository for actual workflow policy and tests/helpers for
 reusable setup. Add categories only when populated. Shared interoperability
-vectors are package data under src/signed_invoice/vectors so installed consumers
+vectors are package data under src/wire/vectors so installed consumers
 can read the same authoritative files without copying fixtures.
 
 Write design and working notes as .txt files under notes/.
@@ -43,8 +47,9 @@ and each distinct unsafe input rejection. Source and recorded argv are separate
 from live posture and installed-artifact proof. Consumer compatibility requires
 declared immutable inputs; source inspection is not runtime or deployment proof.
 
-Keep errors direct and safe: InvoiceError for protocol failures, TypeError for
-wrong API argument types. Let key/backend failures propagate. Preserve unrelated
+Keep errors direct and safe: InvoiceError for invoice protocol failures and
+ValueError for voucher protocol failures; preserve the qualified TypeError API
+contracts and deliberate backend failure translations. Preserve unrelated
 work. Edit by hand with patches; do not run ad hoc file-rewriting scripts.
 Commit coherent slices with explicit paths after --. Never edit consumer repos
 without their own authorization. No empty targets, skips or expected failures

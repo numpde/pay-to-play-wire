@@ -99,38 +99,38 @@ if [[ "$action" == publish/release ]]; then
     mkdir -- "$scratch/source"
     native 'source archive capture' 30 git archive --format=tar --output="$scratch/source.tar" "$commit"
     tar -xf "$scratch/source.tar" -C "$scratch/source"
-    mkdir -p -- "$scratch/source/.work/invoice"
-    cp -- .work/invoice/admission "$scratch/source/.work/invoice/admission"
-    cp -a -- .work/invoice/wheels "$scratch/source/.work/invoice/wheels"
+    mkdir -p -- "$scratch/source/.work/wire"
+    cp -- .work/wire/admission "$scratch/source/.work/wire/admission"
+    cp -a -- .work/wire/wheels "$scratch/source/.work/wire/wheels"
     printf 'Qualifying source %s for %s; logs: %s\n' "$commit" "$tag" "$scratch"
     native 'release package build' 660 make --no-print-directory -C "$scratch/source" package/build > "$scratch/release-build.log" 2>&1
     readonly artifacts=$scratch/source/.work/dist
-    readonly wheel=signed_invoice-$version-py3-none-any.whl sdist=signed_invoice-$version.tar.gz
+    readonly wheel=wire-$version-py3-none-any.whl sdist=wire-$version.tar.gz
     [[ -f "$artifacts/$wheel" && -f "$artifacts/$sdist" ]] || fail 'Cannot publish release: TAG does not match the version in the built package.'
     native 'release qualification' 660 make --no-print-directory -C "$scratch/source" test > "$scratch/release-test.log" 2>&1
     [[ $(git rev-parse HEAD) == "$commit" && -z $(git status --porcelain) ]] || fail 'Cannot publish release: the checkout changed during qualification.'
     declare -A qualified=()
     while read -r marker digest name extra; do
         [[ "$marker" == QUALIFIED_SHA256 ]] || continue
-        case "$name" in "$wheel"|"$sdist"|sha256.json) ;; *) fail 'Cannot publish release: qualification returned an unexpected artifact name.' ;; esac
+        case "$name" in "$wheel"|"$sdist"|source.json|sha256.json) ;; *) fail 'Cannot publish release: qualification returned an unexpected artifact name.' ;; esac
         [[ -z "$extra" && "$digest" =~ ^[0-9a-f]{64}$ && ! -v qualified["$name"] ]] || fail 'Cannot publish release: qualification returned a malformed or duplicate artifact receipt.'
         qualified["$name"]=$digest
     done < "$scratch/release-test.log"
-    [[ ${#qualified[@]} == 3 ]] || fail 'Cannot publish release: the installed-artifact check did not return its three exact byte identities.'
-    for name in "$wheel" "$sdist" sha256.json; do
+    [[ ${#qualified[@]} == 4 ]] || fail 'Cannot publish release: the installed-artifact check did not return its four exact byte identities.'
+    for name in "$wheel" "$sdist" source.json sha256.json; do
         [[ $(sha256sum "$artifacts/$name" | cut -d ' ' -f1) == "${qualified[$name]}" ]] || fail 'Cannot publish release: artifact bytes changed after qualification.'
     done
     readonly wheel_hash=${qualified[$wheel]}
     readonly wheel_url=https://github.com/$repository/releases/download/$tag/$wheel
-    printf 'Source: `%s`.\n\nQualified with `make package/build` and `make test` in the maintained containers.\n\n```text\nsigned-invoice @ %s#sha256=%s\n```\n' \
+    printf 'Source: `%s`.\n\nQualified with `make package/build` and `make test` in the maintained containers.\n\n```text\nwire @ %s#sha256=%s\n```\n' \
         "$commit" "$wheel_url" "$wheel_hash" > "$scratch/release-notes.md"
     if ! git show-ref --verify --quiet "refs/tags/$tag"; then git tag -a "$tag" "$commit" -m "Release $version"; fi
     native 'release tag push' 120 git push "$push_url" "refs/tags/$tag:refs/tags/$tag"
     native 'draft release creation' 120 gh release create "$tag" --repo "$repository_url" --verify-tag --draft --title "$version" \
-        --notes-file "$scratch/release-notes.md" "$artifacts/$wheel" "$artifacts/$sdist" "$artifacts/sha256.json" \
+        --notes-file "$scratch/release-notes.md" "$artifacts/$wheel" "$artifacts/$sdist" "$artifacts/source.json" "$artifacts/sha256.json" \
         "$scratch/release-build.log" "$scratch/release-test.log"
     native 'uploaded release acquisition' 120 gh release download "$tag" --repo "$repository_url" --dir "$scratch/downloaded"
-    for name in "$wheel" "$sdist" sha256.json; do
+    for name in "$wheel" "$sdist" source.json sha256.json; do
         [[ $(sha256sum "$scratch/downloaded/$name" | cut -d ' ' -f1) == "${qualified[$name]}" ]] || fail 'Cannot publish release: downloaded bytes differ from the qualified artifact; the draft remains for inspection.'
     done
     for name in release-build.log release-test.log; do

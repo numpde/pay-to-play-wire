@@ -12,9 +12,9 @@ from importlib.resources import files
 from joserfc import jws
 from joserfc.jwk import OKPKey
 
-from signed_invoice import SignedInvoice, decode_invoice, verify_invoice
-from signed_invoice.jws import INVOICE_TYPE
 from tests.helpers.invoices import PROVIDER, signing_key
+from wire.invoice import SignedInvoice, decode_invoice, verify_invoice
+from wire.invoice.jws import INVOICE_TYPE
 
 
 class JOSEInteropTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class JOSEInteropTests(unittest.TestCase):
             }
         )
         public = OKPKey.import_key({"kty": "OKP", "crv": "Ed25519", "x": PROVIDER})
-        vectors = json.loads(files("signed_invoice").joinpath("vectors/invoice.json").read_bytes())
+        vectors = json.loads(files("wire").joinpath("vectors/invoice.json").read_bytes())
         header = {"alg": "Ed25519", "typ": INVOICE_TYPE}
         for case in vectors["cases"]:
             with self.subTest(case=case["name"]):

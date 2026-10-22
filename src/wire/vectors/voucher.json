@@ -1,0 +1,26 @@
+{
+  "profile": "PayToPlay/2",
+  "evidence": "Digest expectations from dapp32 JS/viem shared-vector.test.ts and p2p_invoice_codec_v1.json. These invoice hashes are opaque historical fixtures, not current JWS invoices or deployed-chain evidence.",
+  "domain": {
+    "name": "PayToPlay",
+    "version": "2",
+    "chainId": "31337",
+    "verifyingContract": "0x3333333333333333333333333333333333333333"
+  },
+  "testPrivateKey": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "testSigner": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+  "customer": "0x1111111111111111111111111111111111111111",
+  "channelId": "7",
+  "cases": [
+    {
+      "cumulativeTotal": "5",
+      "invoiceHash": "0x3134afb4be4afd516d156b1180cd756391c9b3a029ad1e3cdeb420717ca18877",
+      "digest": "0xecc7ad8125563308e3a9facc2f60fca5b546698995c2e5d8812cce9e0c7ec57f"
+    },
+    {
+      "cumulativeTotal": "12",
+      "invoiceHash": "0xc067abc793efdbee5e1d9fa4744cb7a62117c3473005c1060389ffee48be3675",
+      "digest": "0x7f211e7d3cc9135f4819d1885ea14bf5b2db962b10ef6c976cb61f97b2adc867"
+    }
+  ]
+}

@@ -6,8 +6,8 @@ require_container()
 
 import unittest
 
-from signed_invoice import require_amount, require_asset, require_best_before, require_public_key
 from tests.helpers.invoices import PROVIDER
+from wire.invoice import require_amount, require_asset, require_best_before, require_public_key
 
 
 class FieldTests(unittest.TestCase):

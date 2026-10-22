@@ -3,18 +3,19 @@ requires = ["setuptools==82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "signed-invoice"
-version = "0.3.0"
-description = "Strict five-field invoice payloads and Ed25519 JWS artifacts"
+name = "wire"
+version = "0.4.0"
+description = "PayToPlay invoice JWS and EIP-712 voucher wire artifacts"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["cryptography==50.0.2"]
 
 [project.optional-dependencies]
 pydantic = ["pydantic==2.13.4"]
+voucher = ["eth-account==0.14.0", "eth-keys==0.8.0", "eth-utils==6.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-signed_invoice = ["vectors/*.json"]
+wire = ["vectors/*.json"]

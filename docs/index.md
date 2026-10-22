@@ -1,26 +1,29 @@
 ---
 layout: default
-title: signed-invoice
+title: pay-to-play-wire
 ---
 
-# signed-invoice
+# pay-to-play-wire
 
-Produce and verify five-field invoices carried as Ed25519 JSON Web Signatures. The package owns payload grammar, exact JWS segments and signed-artifact identity. Applications own provider trust and authorization, service schemas, payment admission, storage, collection and fulfillment.
+Produce and verify provider invoices carried as Ed25519 JSON Web Signatures and buyer authorizations carried as PayToPlay/2 EIP-712 vouchers. The Python package is `wire`. It owns the two wire profiles, parsing, signing, verification and interoperability vectors. Applications own provider and registered-signer authorization, service schemas, payment admission, storage, collection and fulfillment.
 
-The [0.3.0 release](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) was qualified from frozen source `be92d1594540f82b73e3765833b42f15804e36d8`. Published 0.2.0 uses its original domain-prefix signature and hash rules; its artifacts remain unchanged. This source accepts and emits only the new JWS profile. A package upgrade does not reinterpret stored legacy offers or migrate consumer policy.
+Version 0.4.0 consolidates the qualified [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) implementation and the local voucher implementation under one namespace. The local candidate passed the maintained protocol, workflow and installed-package checks; public release qualification and its acquisition receipt are pending. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
 
-The immutable base wheel requirement is:
+The package's dependency selections are:
 
 ```text
-signed-invoice @ https://github.com/numpde/signed-invoice/releases/download/v0.3.0/signed_invoice-0.3.0-py3-none-any.whl#sha256=598e0bf346d41a517a788b0847635805b8ae068d194fba7cad43661d87a4729b
+wire                    # Invoice support; cryptography is the only direct dependency.
+wire[pydantic]          # Invoice Pydantic/OpenAPI adapter.
+wire[voucher]           # EIP-712 voucher backend, including transitive Pydantic.
+wire[pydantic,voucher]  # Both integrations from the same release.
 ```
 
-Acquire and verify the actual wheel explicitly, then install offline in the consumer's maintained environment. To declare optional adapter dependencies, use `signed-invoice[pydantic]` with the same URL and hash. The release also carries the sdist, hash manifest and qualification logs. Downloaded draft assets were verified before publication.
+These names describe extras, not installation commands or immutable pins. Consumers must acquire the released wheel explicitly, verify its actual SHA-256, and pin the same URL and hash for every selected extra before offline installation. A public acquisition URL and digest will be recorded only after release qualification. Import `wire.invoice` or `wire.voucher` directly; the root package loads neither optional integration.
 
 ## Sign, preserve and verify an invoice
 
 ```python
-from signed_invoice import SignedInvoice, encode_invoice, sign_invoice, verify_invoice
+from wire.invoice import SignedInvoice, encode_invoice, sign_invoice, verify_invoice
 
 # fields contains the five-field offer below. private_key is the provider's
 # Ed25519PrivateKey; trusted_key comes from application enrollment/authorization.
@@ -99,7 +102,7 @@ The core requires only `cryptography==50.0.2`. The optional `pydantic` extra sel
 
 ```python
 from pydantic import BaseModel, ConfigDict
-from signed_invoice.pydantic import SignedInvoiceValue
+from wire.invoice.pydantic import SignedInvoiceValue
 
 class Response(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
@@ -110,10 +113,38 @@ The field validates three-string mappings or core `SignedInvoice` values, return
 
 **Raw duplicate-member protection belongs before framework JSON parsing.** Pydantic/FastAPI mapping inputs have already lost duplicate-name information; even Pydantic's JSON validation cannot restore it. The raw HTTP JSON owner must reject duplicate names before passing the parsed request to the adapter. `SignedInvoice.from_json(original_bytes)` enforces that rule for a standalone flattened artifact. Encoded protected-header and payload JSON remain duplicate-aware in the shared codec because their original bytes are available.
 
+## Sign and verify a voucher
+
+Select the `voucher` extra. The contract profile fixes domain name `PayToPlay`, version `2`, and ordered `Voucher` fields `customer/address`, `channelId/uint256`, `cumulativeTotal/uint256`, `invoiceHash/bytes32`. The caller supplies a trusted chain ID, contract address and registered voucher signer. The signer may differ from the customer position owner.
+
+```python
+from wire.voucher import (
+    SignedVoucher, VoucherDomain, build_voucher_typed_data,
+    sign_voucher, verify_voucher,
+)
+
+# Addresses are bytes20, invoice identity is bytes32, and amounts are base units.
+# The buyer owns buyer_private_key; services receive only the resulting artifact.
+domain = VoucherDomain(chain_id, verifying_contract)
+typed_data = build_voucher_typed_data(
+    domain=domain, customer=customer, channel_id=channel_id,
+    cumulative_total=cumulative_total,
+    invoice_hash=bytes.fromhex(invoice.invoice_hash[2:]),
+)
+voucher = sign_voucher(typed_data, buyer_private_key)
+received_voucher = SignedVoucher.from_json(voucher.to_json())
+verify_voucher(received_voucher, expected_domain=domain,
+               expected_signer=registered_voucher_signer)
+```
+
+`SignedVoucher` is immutable and exposes fresh `typed_data`, `domain` and `message` projections, a hex `signature`, a bytes32 `digest`, and `to_dict()` / `to_json()`. Transport contains exactly `typedData` and `signature`. Wire uint256 values are canonical decimal strings; addresses, hashes and signatures use lowercase `0x` hex. Signature form is 65 bytes, low-s, with recovery byte 27 or 28. Parsing bounded UTF-8 JSON rejects duplicate fields and accepts at most 8192 bytes. Protocol failures raise `ValueError`; the typed Python construction APIs reject wrong argument types with `TypeError`.
+
+The EIP-712 digest excludes the signature. It is a different identity rule from the invoice's complete-JWS hash. Constructors validate structure and profile; only `verify_voucher` authenticates under the supplied expected domain and signer. Applications must separately check the voucher's invoice binding, channel, cumulative authorization and registered-position authority. The package queries no chain and establishes no collateral, collectibility, purchase acceptance or settlement.
+
 ## Compatibility and qualification
 
-0.3.0 removes the old `domain` arguments, detached-signature APIs and `bytes`/`signature` envelope. It provides no legacy verification path. The full-artifact hash differs from every pre-JWS invoice hash. Coordinate explicit consumer package pins and stored-artifact policy; do not reinterpret old records. Portable EVM voucher schemas and verification belong to their separate contract owner, outside this package.
+Imports move from `signed_invoice` to `wire.invoice` and from `signed_voucher` to `wire.voucher`. Remove the displaced package pins and copied schemas together when adopting one qualified `wire` release. No compatibility namespaces are shipped. The invoice profile still accepts only the JWS format introduced in 0.3.0, with no custom-domain or detached-signature verification path. Its `typ` profile identifier intentionally retains its signed spelling. Historical pre-JWS identities are not reinterpreted.
 
-Shared authoritative vectors are installed at `importlib.resources.files("signed_invoice").joinpath("vectors/invoice.json")`. They contain exact payloads, flattened artifacts, compact strings and full hashes. The public signing test seed is from RFC 8032 and must never identify real offers. Independent Python `joserfc` and JavaScript `jose` checks verify and regenerate the same Ed25519 artifacts; the JWS profile still enforces the expected type separately from generic cryptographic verification.
+Read shared vectors using `importlib.resources.files("wire").joinpath("vectors/invoice.json")` and `vectors/voucher.json`. Invoice vectors preserve exact payloads, flattened artifacts, compact strings and full hashes from signed-invoice 0.3.0. Voucher vectors preserve the independent contract-owner digest expectations; their historical invoice hashes are opaque fixtures. Public fixture keys must never identify real offers or authorizations.
 
-Use [the maintained Make/container workflows](https://github.com/numpde/signed-invoice#development) for development and qualification. `make vectors/show` prints candidate vector expectations for manual review and never rewrites source. [The JWS record](https://github.com/numpde/signed-invoice/blob/main/notes/008_jws_profile.txt) records provenance, reviewed dependencies, independent evidence, limitations and publication status.
+The campaigns cover independent Python `joserfc` invoice interoperability, voucher contract-digest expectations, and the composed invoice-to-voucher handoff. The integrity-verified JavaScript `jose` probe also verified and exactly regenerated the relocated invoice vectors. Direct donor/current wheel comparison preserved voucher signatures and transport bytes; the independent prepared viem backend verified and exactly regenerated those signatures for historical vectors and both current invoice identities. These offline checks do not prove consumer deployment or live chain settlement. The maintained Make/container lanes and qualification limits are described in [the repository README](https://github.com/numpde/pay-to-play-wire#development). `make vectors/show` prints candidate invoice expectations without rewriting source. [The consolidation record](https://github.com/numpde/pay-to-play-wire/blob/main/notes/010_wire_consolidation.txt) identifies donor revisions, deliberate adaptations and current verification status.

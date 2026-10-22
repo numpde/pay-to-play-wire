@@ -1,6 +1,6 @@
 include README.md pyproject.toml
 recursive-include src *.py *.json
-recursive-include docs *.md
+graft docs
 prune tests
 prune tools
 prune containers

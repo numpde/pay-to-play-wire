@@ -4,14 +4,24 @@ printf 'git %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
 case "$1" in
     status) exit 0 ;;
     rev-parse) printf '%040d\n' 1 ;;
-    remote) printf 'git@github.com:numpde/signed-invoice.git\n' ;;
+    remote) printf 'git@github.com:numpde/pay-to-play-wire.git\n' ;;
     config)
         case "$PUBLISH_TEST_MODE" in
             matching) printf 'url.git@github.com:another/.pushinsteadof\ngit@github.com:numpde/\0' ;;
             unrelated) printf 'url.git@github.com:another/.pushinsteadof\ngit@github.com:unrelated/\0' ;;
-            absent|unknown) exit 1 ;;
+            absent|unknown|publish|corrupt-source) exit 1 ;;
             config-error) exit 3 ;;
             *) exit 97 ;;
         esac ;;
+    show-ref) exit 1 ;;
+    archive)
+        for argument in "$@"; do
+            if [[ "$argument" == --output=* ]]; then
+                tar -cf "${argument#--output=}" --files-from=/dev/null
+                exit
+            fi
+        done
+        exit 97 ;;
+    tag|push) exit 0 ;;
     *) exit 97 ;;
 esac

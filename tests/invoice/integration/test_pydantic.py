@@ -4,15 +4,16 @@ from tools.ops.container_guard import require_container
 
 require_container()
 
+import base64
 import json
 import unittest
 from dataclasses import fields
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
-from signed_invoice import InvoiceError, SignedInvoice, encode_invoice, sign_invoice
-from signed_invoice.pydantic import SignedInvoiceValue
 from tests.helpers.invoices import invoice_fields, signing_key
+from wire.invoice import InvoiceError, SignedInvoice, encode_invoice, sign_invoice, verify_invoice
+from wire.invoice.pydantic import SignedInvoiceValue
 
 
 class Response(BaseModel):
@@ -50,6 +51,15 @@ class AdapterTests(unittest.TestCase):
                 self.assertEqual(member.metadata["max_length"], projected["maxLength"])
             response = Response.model_json_schema(mode=mode)
             self.assertEqual(schema, response["properties"]["invoice"])
+
+    def test_structural_adapter_does_not_authenticate_the_signature(self):
+        signature = bytearray(base64.urlsafe_b64decode(self.artifact.signature + "=="))
+        signature[0] ^= 1
+        carried = dict(self.artifact.to_dict(), signature=base64.urlsafe_b64encode(signature).rstrip(b"=").decode("ascii"))
+        artifact = self.adapter.validate_python(carried)
+        self.assertEqual(carried, artifact.to_dict())
+        with self.assertRaises(InvoiceError):
+            verify_invoice(artifact, public_key=signing_key().public_key())
 
     def test_structural_and_profile_rejections_are_enforced_for_python_and_json(self):
         for value in (

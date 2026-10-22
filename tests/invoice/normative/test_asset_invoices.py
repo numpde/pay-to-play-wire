@@ -4,12 +4,13 @@ from tools.ops.container_guard import require_container
 
 require_container()
 
+import hashlib
 import json
 import unittest
 from importlib.resources import files
 
-from signed_invoice import JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
 from tests.helpers.invoices import invoice_fields, signing_key
+from wire.invoice import JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
 
 
 class InvoiceTests(unittest.TestCase):
@@ -49,8 +50,12 @@ class InvoiceTests(unittest.TestCase):
 
 
 class VectorTests(unittest.TestCase):
+    def test_published_invoice_0_3_0_vector_bytes_are_unchanged(self):
+        raw = files("wire").joinpath("vectors/invoice.json").read_bytes()
+        self.assertEqual("a83eaebab9e17bd5320d29c17ea1d40398cae8715d9e1b90e5698adfb829dc2f", hashlib.sha256(raw).hexdigest())
+
     def test_retained_jws_vectors_preserve_exact_segments_payload_and_identity(self):
-        vectors = json.loads(files("signed_invoice").joinpath("vectors/invoice.json").read_bytes())
+        vectors = json.loads(files("wire").joinpath("vectors/invoice.json").read_bytes())
         key = signing_key()
         self.assertEqual(["native", "erc20"], [case["name"] for case in vectors["cases"]])
         for case in vectors["cases"]:

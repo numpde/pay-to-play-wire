@@ -12,9 +12,9 @@ from dataclasses import FrozenInstanceError, replace
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from signed_invoice import InvoiceError, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
-from signed_invoice.jws import INVOICE_TYPE, MAX_JSON_BYTES, PROTECTED_BYTES
 from tests.helpers.invoices import BENEFICIARY, invoice_fields, signing_key
+from wire.invoice import InvoiceError, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
+from wire.invoice.jws import INVOICE_TYPE, MAX_JSON_BYTES, PROTECTED_BYTES
 
 
 def encoded(raw):
