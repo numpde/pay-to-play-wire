@@ -7,7 +7,7 @@ title: pay-to-play-wire
 
 Produce and verify provider invoices carried as Ed25519 JSON Web Signatures and buyer authorizations carried as PayToPlay/2 EIP-712 vouchers. The Python package is `wire`. It owns the two wire profiles, parsing, signing, verification and interoperability vectors. Applications own provider and registered-signer authorization, service schemas, payment admission, storage, collection and fulfillment.
 
-Version 0.4.0 consolidates the qualified [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) implementation and the local voucher implementation under one namespace. The local candidate passed the maintained protocol, workflow and installed-package checks; public release qualification and its acquisition receipt are pending. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
+The [0.4.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.4.0) consolidates [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) and the qualified voucher implementation under one namespace. It was built and qualified from frozen source `7eb5b1dd87d07e5281bc07a387920625eeef3ab0`; downloaded draft assets matched before publication. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
 
 The package's dependency selections are:
 
@@ -18,7 +18,13 @@ wire[voucher]           # EIP-712 voucher backend, including transitive Pydantic
 wire[pydantic,voucher]  # Both integrations from the same release.
 ```
 
-These names describe extras, not installation commands or immutable pins. Consumers must acquire the released wheel explicitly, verify its actual SHA-256, and pin the same URL and hash for every selected extra before offline installation. A public acquisition URL and digest will be recorded only after release qualification. Import `wire.invoice` or `wire.voucher` directly; the root package loads neither optional integration.
+These names describe dependency selections. The immutable base wheel requirement is:
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.4.0/wire-0.4.0-py3-none-any.whl#sha256=7b58c25ed49f94e0c2194b8899c0d49e672bd768432186bdc2be2d29c67d8ffe
+```
+
+For optional dependencies, replace `wire` with `wire[pydantic]`, `wire[voucher]` or `wire[pydantic,voucher]` while retaining the exact same URL and hash. Acquire the wheel explicitly, verify its actual SHA-256, then install offline in the consumer's maintained environment. The release includes the sdist, pre-build source inventory, hash manifest and qualification logs. Import `wire.invoice` or `wire.voucher` directly; the root package loads neither optional integration.
 
 ## Sign, preserve and verify an invoice
 

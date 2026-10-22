@@ -1,6 +1,6 @@
 # pay-to-play-wire
 
-[Protocol and API documentation](docs/index.md)
+**[Documentation — GitHub Pages](https://numpde.github.io/pay-to-play-wire/)** · [Documentation source](docs/index.md)
 
 Development and operations for `wire`, the shared invoice JWS and PayToPlay/2
 voucher package. The base provides `wire.invoice`; extras `pydantic` and

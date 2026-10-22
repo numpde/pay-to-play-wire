@@ -159,6 +159,31 @@ baseline.json ee99fc25f3c00130f075cbdf648c3de6a94a30c9fbfd1850f787b61596ae4664;
 cross-language.json af9204e4e92ecb2cd92311e7fe1a1363a3c6da49aa18c32b2d1bc8af1a3baa1a.
 No consumer source, dependency tree or lock was modified by these probes.
 
-Frozen-source release qualification and publication remain a separate final gate.
-No public wire release, live Pages or consumer deployment is claimed by these
-local checks. Historical signed-invoice assets remain at their original URLs.
+Release qualification and publication
+
+Committed the coherent port as 7eb5b1dd87d07e5281bc07a387920625eeef3ab0.
+Created numpde/pay-to-play-wire and published v0.4.0 through
+make publish/release TAG=v0.4.0. The publisher captured that exact committed
+source, rebuilt offline and passed lint, 50 repository checks, 43 invoice tests,
+13 voucher tests and all eight original/rebuilt installed dependency profiles.
+It verified every downloaded draft artifact and both logs before making the
+release public. GH readback confirmed isDraft=false. The previous repository
+and all historical signed-invoice releases were left unchanged.
+
+Published wheel SHA-256 7b58c25ed49f94e0c2194b8899c0d49e672bd768432186bdc2be2d29c67d8ffe;
+sdist f3679624c00cf8318c601c426a9adf48f35340d5aa26ad90feedea5132f6b030;
+source.json 1ddf3b18ca7d17470b12e8680f19dfdfc8c0908fa7b8861fdf1b2da3e3be4e88;
+sha256.json 239a02270407a0bf7c657dd67e0f74d32338dbc22c50d6fc94e64c91362c79b1.
+Build log 6c37c18e963f9f26163e50fc03c73112203dbe1095508bcd7b8e68f7ad06ddc2;
+test log 7651ae83e64d45d4ad7599d86e33fceafe05d33143a0f2c621164759c0036e13.
+Receipts are retained in .work/publication.bWWOyxDS; public assets are under
+https://github.com/numpde/pay-to-play-wire/releases/tag/v0.4.0.
+Anonymous interface-bound HTTPS acquisition of the public wheel matched its
+qualified bytes exactly. The donor/current wheel comparison and independent
+viem oracle were rerun against that exact released wheel and passed again.
+Released-wheel receipts retained under .work/validation/interop/voucher:
+released-baseline.json SHA-256
+409de9efe85df1c53160b552826e536ed7f53ec4f15405b8a0ae55eaf1573168;
+released-cross-language.json
+54be977b90e740ef976b8d2e0a6fcd2275521b1a3374fb0be0cb03601f3a31a5.
+These checks establish no consumer cutover, deployment or chain settlement.
