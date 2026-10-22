@@ -24,4 +24,4 @@ sha256.json SHA256: 896d1e0ec08c3b20d5552023c934af2e59106561dbe61c0d3af6225194c2
 acceptance.json SHA256: d109cdf8f21c608d7485adc7043976a52f60b37692407d7ace2a4b3e8fac4f25
 ```
 
-Local qualification and publication receipts are retained under `.work/publication.UIbx48xv/`. The draft upload, downloaded bytes and anonymous download were checked against that frozen source's artifacts. No older release assets were replaced.
+The published [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.7.0/release-build.log) and [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.7.0/release-test.log) record release qualification. Downloaded draft assets and the anonymous public wheel were checked against the artifacts built from the source revision above. No older release assets were replaced.
