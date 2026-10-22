@@ -1,0 +1,27 @@
+Complete default installation, 2026-10-22
+
+The user requires one ergonomic installation for the complete package. wire now
+declares cryptography, Pydantic and the Ethereum backends as direct dependencies.
+There are no optional dependency selections. Runtime module boundaries remain:
+importing invoices does not eagerly import Pydantic or the Ethereum backend.
+Neither protocol, signed artifact identity nor shared adapter behavior changes.
+
+Copy-and-edit provenance: current qualified wire source
+ff7772e228eb117e98222f9aa21f9029e2a1c31a. Merge the existing runtime and voucher
+locks into requirements/runtime.lock, preserving every exact version and wheel
+hash; remove the redundant Pydantic closure and obsolete voucher lock. The tool
+image lock and admitted image inputs do not change. No new dependency versions,
+acquisition or implicit image rebuild is needed. The existing exact-version
+advisory review from 2026-10-22 remains applicable; see note 010 for its scope.
+
+Installed-artifact qualification now installs an ordinary hash-pinned wire
+requirement into one fresh environment for each of the published wheel and
+sdist-derived wheel. It requires all declared dependencies, no Provides-Extra
+metadata, both protocol campaigns and both adapter campaigns. The source-free
+launcher mounts just one runtime lock. Remove the eight-profile matrix rather
+than preserving tests for installation modes that no longer exist.
+
+Qualification and release receipts will be added after frozen-source publication.
+Pre-commit lint and all 52 repository tests passed, including source-free package
+launcher arguments and the observed contained runtime posture. Frozen release
+qualification will run the full behavioral and installed-artifact campaigns.

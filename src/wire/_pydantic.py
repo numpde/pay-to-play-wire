@@ -1,4 +1,4 @@
-"""Optional framework bridge for core signed-artifact transport contracts.
+"""Shared framework bridge for core signed-artifact transport contracts.
 
 Framework mappings have already lost duplicate JSON members. Use from_json on
 the original bytes when that rejection is required. Parsing never authenticates.

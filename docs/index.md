@@ -9,22 +9,19 @@ Produce and verify provider invoices carried as Ed25519 JSON Web Signatures and 
 
 The [0.5.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.5.0) provides uniform artifact interfaces and matching Pydantic adapters. It was built and qualified from frozen source `075e47ff75d73a3680e8863d0e13691a50a04670`; downloaded draft assets matched before publication. The preceding [0.4.0 consolidation](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.4.0) brought [signed-invoice 0.3.0](https://github.com/numpde/signed-invoice/releases/tag/v0.3.0) and the qualified voucher implementation under one namespace. Historical releases stay at their original locations. Changing imports preserves both wire profiles; it does not reinterpret stored offers or migrate consumer policy.
 
-The package's dependency selections are:
+Install `wire` for both protocols and both Pydantic/OpenAPI adapters. There are no extras to select.
 
 ```text
-wire                    # Invoice support; cryptography is the only direct dependency.
-wire[pydantic]          # Invoice Pydantic/OpenAPI adapter.
-wire[voucher]           # EIP-712 voucher backend, including transitive Pydantic.
-wire[pydantic,voucher]  # Both backends and their Pydantic/OpenAPI adapters.
+wire  # Invoice JWS, PayToPlay/2 vouchers and both Pydantic/OpenAPI adapters.
 ```
 
-These names describe dependency selections. The immutable base wheel requirement is:
+This installation contract is new in the 0.6.0 candidate. The published 0.5.0 requirement below predates removal of the extras and is retained until 0.6.0 publication is verified:
 
 ```text
 wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.5.0/wire-0.5.0-py3-none-any.whl#sha256=2a62772e9edbfc236eb43d4619fa517d2575b21a8e656a13a1418130b5ef219d
 ```
 
-For optional dependencies, replace `wire` with `wire[pydantic]`, `wire[voucher]` or `wire[pydantic,voucher]` while retaining the exact same URL and hash. Acquire the wheel explicitly, verify its actual SHA-256, then install offline in the consumer's maintained environment. The release includes the sdist, pre-build source inventory, hash manifest and qualification logs. Import `wire.invoice` or `wire.voucher` directly; the root package loads neither optional integration.
+Acquire the wheel explicitly, verify its actual SHA-256, then install offline in the consumer's maintained environment. The release includes the sdist, pre-build source inventory, hash manifest and qualification logs. Import `wire.invoice`, `wire.voucher`, `wire.invoice.pydantic` or `wire.voucher.pydantic` directly. The root package does not eagerly import the protocol modules or adapters.
 
 ## Sign, preserve and verify an invoice
 
@@ -102,9 +99,9 @@ Duplicate decoded member names, BOMs, malformed UTF-8/JSON, nonfinite numbers an
 
 Wrong Python argument types raise `TypeError`; malformed protocol inputs raise `InvoiceError`, a `ValueError`. Key/backend failures propagate. Diagnostics do not echo the document. The scalar helpers `require_public_key`, `require_asset`, `require_amount` and `require_best_before` retain their five-field validation contracts and return inputs without normalization.
 
-## Optional Pydantic and OpenAPI integration
+## Pydantic and OpenAPI integration
 
-The core requires only `cryptography==50.0.2`. The optional `pydantic` extra selects the qualified Pydantic version. Applications can use the shared annotation directly:
+Pydantic and the signing backends are installed with `wire`. Applications can use the shared annotation directly:
 
 ```python
 from pydantic import BaseModel, ConfigDict
@@ -117,9 +114,9 @@ class Response(BaseModel):
 
 The field validates three-string mappings or core `SignedInvoice` values, returns a core artifact and serializes it as the flattened object. Its required fields and bounds are projected from the core artifact; protocol semantics delegate to `SignedInvoice.from_dict`. Pydantic/FastAPI can generate the extra-forbidden object schema from this annotation. Applications need no local JWS mirror model. Validation is structural and does not verify a provider signature or authorization.
 
-Both signed artifact types expose the same transport methods: `from_dict(mapping)`, `from_json(bytes)`, `to_dict()`, `to_json()` and `json_schema()`. The schema method needs no Pydantic dependency and returns a fresh JSON Schema object. Schemas describe wire structure and lexical bounds; core parsing additionally enforces decoded JWS profiles, the uint256 ceiling and contract signature form. Schema validation alone does not establish those rules or authenticate a signature.
+Both signed artifact types expose the same transport methods: `from_dict(mapping)`, `from_json(bytes)`, `to_dict()`, `to_json()` and `json_schema()`. The schema method returns a fresh JSON Schema object without invoking Pydantic. Schemas describe wire structure and lexical bounds; core parsing additionally enforces decoded JWS profiles, the uint256 ceiling and contract signature form. Schema validation alone does not establish those rules or authenticate a signature.
 
-For vouchers, select `wire[pydantic,voucher]` and use `wire.voucher.pydantic.SignedVoucherValue` in exactly the same way. Both annotations use one framework bridge that delegates mapping validation, serialization and schema presentation to the corresponding core artifact. Neither adapter stores an independent field model or chooses trusted keys.
+For vouchers, use `wire.voucher.pydantic.SignedVoucherValue` in exactly the same way. Both annotations use one framework bridge that delegates mapping validation, serialization and schema presentation to the corresponding core artifact. Neither adapter stores an independent field model or chooses trusted keys.
 
 ```python
 from wire.voucher.pydantic import SignedVoucherValue
@@ -133,7 +130,7 @@ class PurchaseRequest(BaseModel):
 
 ## Sign and verify a voucher
 
-Select the `voucher` extra. The contract profile fixes domain name `PayToPlay`, version `2`, and ordered `Voucher` fields `customer/address`, `channelId/uint256`, `cumulativeTotal/uint256`, `invoiceHash/bytes32`. The caller supplies a trusted chain ID, contract address and registered voucher signer. The signer may differ from the customer position owner.
+The contract profile fixes domain name `PayToPlay`, version `2`, and ordered `Voucher` fields `customer/address`, `channelId/uint256`, `cumulativeTotal/uint256`, `invoiceHash/bytes32`. The caller supplies a trusted chain ID, contract address and registered voucher signer. The signer may differ from the customer position owner.
 
 ```python
 from wire.voucher import (

@@ -192,25 +192,16 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 import base64
 distribution = importlib.metadata.distribution('wire')
 project = json.loads(sys.argv[1])
-profile = json.loads(sys.argv[2])
 assert distribution.version == project['version']
-expected_requires = project['dependencies'] + [
-    requirement + '; extra == "' + extra + '"'
-    for extra, requirements in project.get('optional-dependencies', {}).items() for requirement in requirements
-]
-assert distribution.requires == expected_requires
-assert distribution.metadata.get_all('Provides-Extra') == list(project.get('optional-dependencies', {}))
+assert distribution.requires == project['dependencies']
+assert distribution.metadata.get_all('Provides-Extra') is None, 'wire must provide all capabilities without extras.'
 assert distribution.metadata['Requires-Python'] == project['requires-python']
 assert Path(wire.__file__).resolve().is_relative_to(Path(sys.prefix))
 assert Path(invoice.__file__).resolve().is_relative_to(Path(sys.prefix))
 for development_module in ('tools', 'tests', 'signed_invoice', 'signed_voucher'):
     assert importlib.util.find_spec(development_module) is None, f"Installed runtime can import development module {development_module!r}."
 assert 'eth_account' not in sys.modules, 'Invoice imports eagerly loaded Ethereum support.'
-assert 'pydantic' not in sys.modules, 'Invoice imports eagerly loaded the optional Pydantic adapter.'
-if not profile:
-    assert importlib.util.find_spec('pydantic') is None, 'Base installation unexpectedly includes Pydantic.'
-if 'voucher' not in profile:
-    assert importlib.util.find_spec('eth_account') is None, 'Installation without voucher unexpectedly includes Ethereum support.'
+assert 'pydantic' not in sys.modules, 'Invoice imports eagerly loaded the Pydantic adapter.'
 vectors = json.loads(importlib.resources.files('wire').joinpath('vectors/invoice.json').read_bytes())
 json.loads(importlib.resources.files('wire').joinpath('vectors/voucher.json').read_bytes())
 for obsolete in ('validate_payment_route', 'require_merchant_id', 'require_identifier',
@@ -258,9 +249,9 @@ for case in vectors['cases']:
         pass
     else:
         raise AssertionError('A legacy version member was accepted.')
-print('Installed core: origin, metadata, JWS vectors, full identity and provider binding passed.', profile)
+print('Installed core: origin, metadata, JWS vectors, full identity and provider binding passed.')
 """
-        optional_code = """
+        invoice_adapter_code = """
 import importlib.resources
 import json
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
@@ -287,8 +278,8 @@ for case in vectors['cases']:
     except ValidationError:
         pass
     else:
-        raise AssertionError('Installed optional adapter accepted a malformed signature segment.')
-print('Installed optional Pydantic adapter: strict core artifacts, JSON, schema and serialization passed.')
+        raise AssertionError('Installed invoice adapter accepted a malformed signature segment.')
+print('Installed invoice Pydantic adapter: strict core artifacts, JSON, schema and serialization passed.')
 """
         voucher_code = """
 import importlib.resources
@@ -351,44 +342,38 @@ for case in vectors['cases']:
 print('Installed voucher Pydantic adapter: core values, JSON, schema and serialization passed.')
 """
         for candidate in (wheel, rebuilt[0]):
-            for profile in ((), ("pydantic",), ("voucher",), ("pydantic", "voucher")):
-                # Fresh environments prove each consumer dependency boundary for
-                # both artifacts; no earlier profile can conceal missing closure.
-                with tempfile.TemporaryDirectory(dir="/runtime") as environment:
-                    runtime_root = Path(environment) / "environment"
-                    execute([sys.executable, "-I", "-m", "venv", str(runtime_root)], cwd=root)
-                    runtime = str(runtime_root / "bin/python")
-                    locks = ("runtime", *profile)
-                    extras = "[" + ",".join(profile) + "]" if profile else ""
-                    requirement = (
-                        f"wire{extras} @ {candidate.as_uri()}#sha256={hashlib.sha256(candidate.read_bytes()).hexdigest()}"
-                    )
-                    execute(
-                        [
-                            runtime,
-                            "-I",
-                            "-m",
-                            "pip",
-                            "install",
-                            "--no-index",
-                            "--no-cache-dir",
-                            "--no-compile",
-                            "--disable-pip-version-check",
-                            "--only-binary=:all:",
-                            "--require-hashes",
-                            "--find-links",
-                            "/dependencies",
-                            *(argument for lock in locks for argument in ("-r", f"/input/{lock}.lock")),
-                            requirement,
-                        ],
-                        cwd=root,
-                    )
-                    execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
-                    execute([runtime, "-I", "-B", "-c", code, json.dumps(project), json.dumps(profile)], cwd=root)
-                    if "pydantic" in profile:
-                        execute([runtime, "-I", "-B", "-c", optional_code], cwd=root)
-                    if "voucher" in profile:
-                        execute([runtime, "-I", "-B", "-c", voucher_code + voucher_adapter_code], cwd=root)
+            # Both distributions must supply the whole package in a fresh
+            # environment, using its ordinary requirement without extras.
+            with tempfile.TemporaryDirectory(dir="/runtime") as environment:
+                runtime_root = Path(environment) / "environment"
+                execute([sys.executable, "-I", "-m", "venv", str(runtime_root)], cwd=root)
+                runtime = str(runtime_root / "bin/python")
+                requirement = f"wire @ {candidate.as_uri()}#sha256={hashlib.sha256(candidate.read_bytes()).hexdigest()}"
+                execute(
+                    [
+                        runtime,
+                        "-I",
+                        "-m",
+                        "pip",
+                        "install",
+                        "--no-index",
+                        "--no-cache-dir",
+                        "--no-compile",
+                        "--disable-pip-version-check",
+                        "--only-binary=:all:",
+                        "--require-hashes",
+                        "--find-links",
+                        "/dependencies",
+                        "-r",
+                        "/input/runtime.lock",
+                        requirement,
+                    ],
+                    cwd=root,
+                )
+                execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
+                execute([runtime, "-I", "-B", "-c", code, json.dumps(project)], cwd=root)
+                execute([runtime, "-I", "-B", "-c", invoice_adapter_code], cwd=root)
+                execute([runtime, "-I", "-B", "-c", voucher_code + voucher_adapter_code], cwd=root)
 
 
 if __name__ == "__main__":

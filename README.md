@@ -3,8 +3,8 @@
 **[Documentation — GitHub Pages](https://numpde.github.io/pay-to-play-wire/)** · [Documentation source](docs/index.md)
 
 Development and operations for `wire`, the shared invoice JWS and PayToPlay/2
-voucher package. The base provides `wire.invoice`; extras `pydantic` and
-`voucher` provide the actual adapter and Ethereum backend. Import
+voucher package. Installing `wire` provides both protocols and both Pydantic
+adapters, with their qualified dependencies. Import
 `wire.invoice.pydantic`, `wire.voucher` and `wire.voucher.pydantic` explicitly. Both
 artifact types expose `from_dict`, `from_json`, `to_dict`, `to_json` and
 `json_schema`; the Pydantic annotations share one bridge to those core APIs.
@@ -66,9 +66,9 @@ new list items and fenced code blocks retain their structural line breaks.
 captures and verifies the artifact bytes, rebuilds a wheel from the sdist offline,
 and checks both wheels in a fresh contained environment. The checks cover import
 origin, metadata, dependencies, payload, resources, JWS and voucher operations.
-Fresh environments for each wheel and dependency selection prove base imports
-without Pydantic/Ethereum and exercise each optional integration independently.
-The voucher extra brings Pydantic transitively; the base does not.
+Fresh environments for each wheel prove that ordinary `wire` installation
+provides both protocols and both adapters without extras. Invoice imports remain
+independent of the Ethereum backend and Pydantic adapter imports.
 
 ## Artifacts and releases
 
@@ -92,7 +92,7 @@ Set `project.version` in `pyproject.toml` for the next release and commit the
 changes. Publish releases and documentation separately from a clean checkout:
 
 ```sh
-make publish/release TAG=v0.5.0
+make publish/release TAG=v0.6.0
 make publish/pages
 ```
 

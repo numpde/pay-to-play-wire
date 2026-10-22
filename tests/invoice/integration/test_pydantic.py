@@ -1,4 +1,4 @@
-"""Shared optional adapter owns structure/schema; raw duplicate parsing stays explicit."""
+"""Shared adapter owns structure/schema; raw duplicate parsing stays explicit."""
 
 from tools.ops.container_guard import require_container
 

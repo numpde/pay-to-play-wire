@@ -1,4 +1,4 @@
-"""Optional voucher field integration; authenticate with verify_voucher explicitly."""
+"""Voucher field integration; authenticate with verify_voucher explicitly."""
 
 from typing import Annotated
 

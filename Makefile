@@ -27,7 +27,7 @@ help:
 	  'test/invoice             Run all invoice behavior campaigns.' \
 	  'test/invoice/normative   Check valid five-field invoices and exact-byte vectors.' \
 	  'test/invoice/adversarial Check malformed documents and cryptographic rejection.' \
-	  'test/invoice/integration Check JWS interoperability and the optional adapter.' \
+	  'test/invoice/integration Check JWS interoperability and the Pydantic adapter.' \
 	  'test/voucher             Check voucher construction, signing and rejection.' \
 	  'test/package             Check installed wheel/sdist artifacts without source mounts.' \
 	  'lint/check               Check Python lint and formatting without writing.'

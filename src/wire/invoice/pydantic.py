@@ -1,4 +1,4 @@
-"""Optional invoice field integration; authenticate with verify_invoice explicitly."""
+"""Invoice field integration; authenticate with verify_invoice explicitly."""
 
 from typing import Annotated
 

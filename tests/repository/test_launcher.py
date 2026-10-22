@@ -302,8 +302,6 @@ esac
         (self.root / ".work/wire/wheels").mkdir()
         shutil.copyfile("tools/ops/package.py", self.root / "tools/ops/package.py")
         shutil.copyfile("requirements/runtime.lock", self.root / "requirements/runtime.lock")
-        shutil.copyfile("requirements/pydantic.lock", self.root / "requirements/pydantic.lock")
-        shutil.copyfile("requirements/voucher.lock", self.root / "requirements/voucher.lock")
         result = subprocess.run(
             ["bash", str(self.root / "tools/ops/wire.sh"), "--print", "test/package"],
             cwd=self.root,
