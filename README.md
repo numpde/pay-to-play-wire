@@ -1,50 +1,49 @@
 # pay-to-play-wire
 
-**[Documentation — GitHub Pages](https://numpde.github.io/pay-to-play-wire/)** · [Documentation source](docs/index.md)
+`wire` is a Python package for creating, reading and verifying signed service invoices and PayToPlay/2 payment vouchers. Installing it includes both protocols and both Pydantic adapters. Applications supply trusted keys and decide whether to accept a purchase, perform a service or transfer funds.
 
-Development and operations for `wire`, the shared invoice JWS and PayToPlay/2
-voucher package. Installing `wire` provides both protocols and both Pydantic
-adapters, with their qualified dependencies. Import
-`wire.invoice.pydantic`, `wire.voucher` and `wire.voucher.pydantic` explicitly. Both
-artifact types expose `from_dict`, `from_json`, `to_dict`, `to_json` and
-`json_schema`; the Pydantic annotations share one bridge to those core APIs.
-The package owns wire
-rules; applications own authorization, policy, persistence and payment effects.
+**Using the package:** start with the [user guide and runnable examples](https://numpde.github.io/pay-to-play-wire/) ([source](docs/index.md)). This README describes how to develop, test and publish the repository.
 
 ## Development
 
-Use `make help` for the maintained commands. It works without Docker or
-dependencies. Project Python, lint, tests, image builds and packaging run in
-containers; the host runs Make, shell orchestration and Git.
+Run `make help` to list supported commands. It needs no Docker image or installed Python dependencies. All project Python, lint, tests and packaging run inside the maintained containers. The host runs Make, shell commands, Docker and Git.
 
-The supported engine is Docker on Linux amd64 at
-`unix:///var/run/docker.sock`, with BuildKit and container-init support. Run as
-a nonzero user and group. The digest-pinned base image must already be available
-locally; these commands never pull an image implicitly.
+The supported environment is Linux amd64 with a local Docker engine at `unix:///var/run/docker.sock`, BuildKit and container-init support. Run as a user whose UID and GID are both nonzero. The exact Python base image pinned in [the Dockerfile](containers/wire/Dockerfile) must already be present in that engine. If it is missing, acquire that exact image through your explicit image-acquisition workflow before continuing; these Make commands do not pull it.
+
+Prepare dependencies and the development image in separate steps:
 
 ```sh
 make prerequisites/check
-# Choose an existing network interface explicitly; eth0 is an example.
+# Review the exact package versions in requirements/wire.lock for advisories.
+# Replace eth0 with an existing interface; Make requires this argument explicitly.
 make dependencies/download NETWORK_INTERFACE=eth0
 make dependencies/check
 make build/image
 make build/verify
+```
+
+| Step | What it establishes |
+| --- | --- |
+| `prerequisites/check` | Required host tools, selected engine and pinned base image are available |
+| `dependencies/download` | Locked dependency wheels and the declared Make package are acquired into an owned staging directory |
+| `dependencies/check` | The current downloaded files match their recorded hashes, checked offline |
+| `build/image` | The copied build inputs and dependency bytes produce the development image offline |
+| `build/verify` | The prepared image runs with the expected user, mounts, network and resource restrictions |
+
+Review advisories before installing package versions into an image or environment; a matching hash proves which bytes were obtained, not that they have no vulnerabilities. The runtime dependency lock is [requirements/runtime.lock](requirements/runtime.lock); the development image also includes test and build tools listed in [requirements/wire.lock](requirements/wire.lock).
+
+Ordinary checks use the prepared image without network access. They never download dependencies, rebuild images or update locks implicitly. Source and root filesystems are read-only; tests run as the calling user, with no effective Linux capabilities, no new privileges and bounded resources. Credentials, private checkout state and engine sockets are excluded. These containers share the host kernel; their restrictions are checked by the repository tests.
+
+## Build and check a candidate
+
+```sh
 make package/build
 make test
 ```
 
-Downloads receive the declared dependency inputs and an owned staging directory.
-Verification hashes actual current files. Image builds capture the declared
-inputs and dependencies, verify those captured bytes offline, then admit the
-observed image ID and input label. Refresh dependencies and images explicitly;
-ordinary checks never download, build or update locks.
+`package/build` writes one wheel, one source distribution, `source.json` and `sha256.json` into `.work/dist/`. That directory must be empty before a build. Retain or move earlier output explicitly before rebuilding.
 
-Tests run without network, as the calling user, with read-only source/root,
-dropped capabilities, no new privileges and bounded CPU, memory, processes and
-temporary storage. Private checkout state, credentials and the engine socket
-are excluded. These are ordinary containers sharing the host kernel.
-
-## Focused checks
+`make test` runs lint, repository checks, invoice tests, voucher tests and installed-package checks. It consumes the previously built artifacts. Focused commands are:
 
 ```sh
 make lint/check
@@ -57,69 +56,42 @@ make test/package
 make vectors/show
 ```
 
-`test/repository` discovers `notes/*_release_v*.md` and rejects manual wrapping of
-paragraphs and list items, plus explicit Markdown line breaks. Keep each paragraph
-or list item on one source line; use blank lines between paragraphs. Headings,
-new list items and fenced code blocks retain their structural line breaks.
+The invoice and voucher tests exercise valid messages and distinct rejection cases. The repository tests check the actual Make workflows and run every Python example in the user guide, in order. `vectors/show` prints invoice inputs and expectations for inspection; it does not rewrite fixtures.
 
-`test/package` consumes previously built artifacts without mounting source. It
-captures and verifies the artifact bytes, rebuilds a wheel from the sdist offline,
-and checks both wheels in a fresh contained environment. The checks cover import
-origin, metadata, dependencies, payload, resources, JWS and voucher operations.
-Fresh environments for each wheel prove that ordinary `wire` installation
-provides both protocols and both adapters without extras. Invoice imports remain
-independent of the Ethereum backend and Pydantic adapter imports.
+`test/package` checks the built distributions without mounting the source package. It verifies their bytes, rebuilds a wheel from the source distribution offline, then installs each wheel in a separate fresh environment. Each installation must supply both protocols and both Pydantic adapters using the ordinary `wire` requirement, without extras. Checks cover dependencies, import locations, metadata, installed test vectors, signing, verification and serialization.
 
-## Artifacts and releases
+`source.json` records the paths and hashes copied before the build backend runs. Distribution contents are compared against that record: omitting the same file from both archives cannot pass merely because the two archives agree. `sha256.json` records hashes of the wheel, source distribution and source inventory.
 
-`make package/build` writes one wheel, one sdist, `source.json` and `sha256.json` to
-`.work/dist/`. It requires an empty output directory. Retain or move previous
-artifacts explicitly before rebuilding. Failed operations report retained
-evidence; confirm owned-process/container cleanup before retrying.
+Repository checks also validate the historical `notes/*_release_v*.md` records. Each paragraph or list item in those files stays on one source line, with blank lines separating blocks. Code fences retain their own line breaks.
 
-`source.json` records paths and SHA-256 values captured before the build backend
-runs. The source-free checker compares both distributions against that record,
-so omitting the same runtime file from both archives cannot pass by agreement.
-The hash manifest covers the wheel, sdist and source inventory; publication
-verifies all four downloaded artifacts as well as the qualification logs.
+## Publish a release or the documentation
 
-GitHub tags name releases. Consumers pin the source commit and verify the actual
-wheel hash; a tag name alone does not make bytes immutable. Release assets allow
-explicit acquisition followed by an offline, hash-locked installation.
-Keep acquisition credentials out of dependency images, layers and runtime.
+These are separate operations. Both require a clean checkout and use the GitHub repository named by `origin`'s sole push URL. Git URL rewrite rules that could redirect that destination are rejected. GitHub authentication stays in host orchestration and never enters package containers.
 
-Set `project.version` in `pyproject.toml` for the next release and commit the
-changes. Publish releases and documentation separately from a clean checkout:
+### Package release
+
+Set the next version in `pyproject.toml` and commit the candidate. Supply its matching tag explicitly; the following uses a placeholder that must be replaced:
 
 ```sh
-make publish/release TAG=v0.6.0
+make publish/release TAG=vX.Y.Z
+```
+
+The publisher captures committed `HEAD`, builds the distributions and runs all checks against that frozen source. It then pushes the matching tag, uploads a draft release, downloads every artifact and qualification log, and compares the downloaded bytes with the checked files. Only a matching draft is made public.
+
+An existing release is rejected and published assets are never replaced. A release tag alone does not prove byte identity; consumers should retain the source revision and verify the actual wheel hash. The release includes the artifacts and logs needed to inspect those identities.
+
+### GitHub Pages
+
+Commit documentation changes on `main`, then run:
+
+```sh
 make publish/pages
 ```
 
-Both publishers use the GitHub repository at `origin`'s sole push URL. Matching
-Git URL rewrite rules are rejected before publication so the captured destination
-cannot change during push.
+This pushes `HEAD`, configures Pages for `main/docs` and waits for the live HTTPS page to report that exact source revision. A changed source or configuration triggers a build; an unchanged publication requests a rebuild. The wait has a ten-minute deadline, and individual API requests have shorter deadlines. A queued build or request timeout does not establish that the new guide is live.
 
-`publish/release` requires the prepared tool image and dependency depot. It
-captures `HEAD` with Git, builds and runs all checks in that frozen source's
-offline containers, and requires `TAG` to match the package version. It creates an annotated local tag
-or checks an existing tag against `HEAD`, then pushes that tag. It uploads a
-draft release, downloads and compares every asset against the exact identities
-reported by the installed-artifact check, then publishes the verified draft.
-An existing release is rejected;
-published bytes are never replaced. A partial failure retains the source,
-artifacts, logs and API receipts under `.work/publication.*` for inspection.
-The tag is a required literal Make command-line argument; ambient `TAG` is ignored.
+If either publisher fails, it reports retained inputs, logs and API receipts under `.work/publication.*`. Inspect those records and confirm process/container cleanup before retrying. Some external steps may already have completed; failure is not permission to overwrite an existing release or discard uncertain state.
 
-`publish/pages` requires the `main` branch. It pushes `HEAD` to `origin/main`,
-configures Pages for `main/docs`, requests a build, then checks the live HTTPS
-page for the exact deployed source revision. It polls with a ten minute deadline;
-individual API/HTTP calls have their own bounds. Source/configuration changes
-trigger their own build; an unchanged publication requests a rebuild explicitly.
-Both commands run Git/GitHub orchestration on the host with the
-operator's existing authentication; credentials never enter package containers.
+## Source and historical evidence
 
-Pages content lives in `docs/`. Repository instructions are in `AGENTS.md`;
-source provenance is in `notes/010_wire_consolidation.txt`; current packaging
-qualification is in `notes/014_complete_default_installation.txt`. Older notes preserve donor history and its
-release evidence; they do not claim a `wire` release or consumer cutover.
+[AGENTS.md](AGENTS.md) defines repository responsibilities and working rules. [The consolidation record](notes/010_wire_consolidation.txt) identifies copied implementations, donor revisions and adaptations. [The current installation record](notes/014_complete_default_installation.txt) records the complete default package and 0.6.0 qualification. Earlier notes describe their own revisions and historical releases; they do not establish that a consumer has adopted or deployed the current package.
