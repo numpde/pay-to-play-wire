@@ -53,6 +53,7 @@ case "$action" in
     test/package)
         require_file tools/ops/package.py
         require_file requirements/runtime.lock
+        require_file requirements/pydantic.lock
         require_directory .work/dist
         require_directory .work/invoice/wheels
         ;;
@@ -259,6 +260,7 @@ case "$action" in
             --mount "type=bind,src=$repository_root/tools/ops/container_guard.py,dst=/workspace/tools/ops/container_guard.py,readonly"
             --mount "type=bind,src=$repository_root/.work/dist,dst=/artifacts,readonly"
             --mount "type=bind,src=$repository_root/requirements/runtime.lock,dst=/input/runtime.lock,readonly"
+            --mount "type=bind,src=$repository_root/requirements/pydantic.lock,dst=/input/pydantic.lock,readonly"
             --mount "type=bind,src=$state/wheels,dst=/dependencies,readonly")
         managed_run --network none "${common[@]}" --tmpfs /runtime:rw,nosuid,nodev,exec,size=128m \
             "${mounts[@]}" "$image_id" python3 -B -m tools.ops.package check

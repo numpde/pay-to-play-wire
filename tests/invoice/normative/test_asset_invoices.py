@@ -1,19 +1,15 @@
-"""Five-field offers, arbitrary services and exact-byte interoperability."""
+"""Five-field payload reachability and retained signed-artifact vectors."""
 
 from tools.ops.container_guard import require_container
 
 require_container()
 
-import base64
-import hashlib
 import json
 import unittest
 from importlib.resources import files
 
-from cryptography.exceptions import InvalidSignature
-
-from signed_invoice import JsonNumber, decode_invoice, encode_envelope, encode_invoice, invoice_hash, sign_invoice, verify_invoice
-from tests.helpers.invoices import DOMAIN, invoice_fields, signing_key
+from signed_invoice import JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
+from tests.helpers.invoices import invoice_fields, signing_key
 
 
 class InvoiceTests(unittest.TestCase):
@@ -25,35 +21,25 @@ class InvoiceTests(unittest.TestCase):
             "cosmos:cosmoshub-3/slip44:118",
             "eip155:1/erc721:0x06012c8cf97BEaD5deAe237070F9587f8E7A266d/771769",
         ):
-            with self.subTest(asset=asset):
-                fields = invoice_fields()
-                fields["payment"] = {"asset": asset, "amount": "5000000"}
-                raw = encode_invoice(fields)
-                self.assertEqual(fields, decode_invoice(raw))
-                self.assertEqual(
-                    raw, verify_invoice(sign_invoice(raw, key, domain=DOMAIN), domain=DOMAIN, public_key=key.public_key())
-                )
+            fields = invoice_fields()
+            fields["payment"] = {"asset": asset, "amount": "5000000"}
+            raw = encode_invoice(fields)
+            self.assertEqual(fields, decode_invoice(raw))
+            self.assertEqual(fields, verify_invoice(sign_invoice(raw, key), public_key=key.public_key()))
 
-    def test_service_accepts_every_json_value_kind_and_lossless_numbers(self):
+    def test_service_accepts_every_json_kind_and_lossless_numbers(self):
         for value in ({}, [], "text", 7, True, False, None, JsonNumber("1.234567890123456789e999999"), JsonNumber("-0")):
-            with self.subTest(value=value):
-                fields = invoice_fields()
-                fields["service"] = value
-                raw = encode_invoice(fields)
-                expected = JsonNumber("7") if type(value) is int else value
-                self.assertEqual(expected, decode_invoice(raw)["service"])
-                self.assertEqual(raw, encode_invoice(decode_invoice(raw)))
+            fields = dict(invoice_fields(), service=value)
+            raw = encode_invoice(fields)
+            expected = JsonNumber("7") if type(value) is int else value
+            self.assertEqual(expected, decode_invoice(raw)["service"])
+            self.assertEqual(raw, encode_invoice(decode_invoice(raw)))
 
     def test_best_before_has_no_clock_or_acceptance_policy(self):
         key = signing_key()
         for seconds in (0, 1, 2000003600, 2**53 - 1):
-            fields = invoice_fields()
-            fields["bestBefore"] = seconds
-            raw = encode_invoice(fields)
-            self.assertEqual(seconds, decode_invoice(raw)["bestBefore"])
-            self.assertEqual(
-                raw, verify_invoice(sign_invoice(raw, key, domain=DOMAIN), domain=DOMAIN, public_key=key.public_key())
-            )
+            raw = encode_invoice(dict(invoice_fields(), bestBefore=seconds))
+            self.assertEqual(seconds, verify_invoice(sign_invoice(raw, key), public_key=key.public_key())["bestBefore"])
 
     def test_amount_has_no_evm_or_python_integer_conversion_limit(self):
         for amount in (str(2**256), "9" * 5000):
@@ -61,41 +47,20 @@ class InvoiceTests(unittest.TestCase):
             fields["payment"]["amount"] = amount
             self.assertEqual(amount, decode_invoice(encode_invoice(fields))["payment"]["amount"])
 
-    def test_supplied_domain_prefixes_original_bytes_without_reconstruction(self):
-        key = signing_key()
-        raw = encode_invoice(invoice_fields()) + b"\n"
-        envelope = json.loads(sign_invoice(raw, key, domain=DOMAIN))
-        signature = base64.b64decode(envelope["signature"])
-        key.public_key().verify(signature, DOMAIN + raw)
-        self.assertEqual("0x" + hashlib.sha256(DOMAIN + raw).hexdigest(), invoice_hash(raw, domain=DOMAIN))
-        for wrong in (raw, hashlib.sha256(DOMAIN + raw).digest(), DOMAIN + raw + b"\n"):
-            with self.subTest(preimage=wrong[:20]), self.assertRaises(InvalidSignature):
-                key.public_key().verify(signature, wrong)
-
 
 class VectorTests(unittest.TestCase):
-    def test_retained_vectors_preserve_exact_bytes_hashes_signatures_and_voucher_linkage(self):
+    def test_retained_jws_vectors_preserve_exact_segments_payload_and_identity(self):
         vectors = json.loads(files("signed_invoice").joinpath("vectors/invoice.json").read_bytes())
-        self.assertEqual(DOMAIN, vectors["invoicePrefixUtf8"].encode())
-        self.assertEqual(["native", "erc20"], [case["name"] for case in vectors["cases"]])
         key = signing_key()
+        self.assertEqual(["native", "erc20"], [case["name"] for case in vectors["cases"]])
         for case in vectors["cases"]:
             with self.subTest(case=case["name"]):
-                raw = case["invoiceUtf8"].encode()
-                fields = decode_invoice(raw)
-                self.assertEqual(raw, encode_invoice(fields))
-                self.assertEqual(case["invoiceBase64"], base64.b64encode(raw).decode())
-                self.assertEqual(case["invoiceHash"], invoice_hash(raw, domain=DOMAIN))
-                self.assertEqual(case["invoiceHash"], case["voucher"]["invoiceHash"])
-                self.assertEqual(fields["payment"]["amount"], case["voucher"]["cumulativeTotal"])
-                self.assertEqual(
-                    raw,
-                    verify_invoice(
-                        encode_envelope(raw, base64.b64decode(case["signatureBase64"])),
-                        domain=DOMAIN,
-                        public_key=key.public_key(),
-                    ),
-                )
-                self.assertEqual(
-                    raw, verify_invoice(sign_invoice(raw, key, domain=DOMAIN), domain=DOMAIN, public_key=key.public_key())
-                )
+                raw = case["payloadUtf8"].encode()
+                artifact = SignedInvoice(**case["invoice"])
+                self.assertEqual(raw, artifact.payload_bytes)
+                self.assertEqual(case["compact"], artifact.compact)
+                self.assertEqual(case["invoiceHash"], invoice_hash(artifact))
+                self.assertEqual(artifact, SignedInvoice.from_json(artifact.to_json()))
+                self.assertEqual(artifact, SignedInvoice.from_compact(case["compact"]))
+                self.assertEqual(artifact, sign_invoice(raw, key))
+                self.assertEqual(decode_invoice(raw), verify_invoice(artifact, public_key=key.public_key()))

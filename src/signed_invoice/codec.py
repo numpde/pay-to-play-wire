@@ -1,21 +1,10 @@
-"""Five-field invoice wire grammar and exact-byte cryptography.
-
-Verification takes an explicitly trusted provider key. Neither a parsed
-invoice nor its beneficiary key supplies that trust. Keep original bytes for
-storage and retransmission; parsing does not authenticate an offer or admit it.
-"""
+"""Strict five-field payload grammar, preserving original UTF-8 and JSON numbers."""
 
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
 import json
 import re
 from dataclasses import dataclass
-
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from .errors import InvoiceError
 from .fields import (
@@ -170,111 +159,4 @@ def encode_invoice(fields: dict) -> bytes:
             raise
         raise InvoiceError("Cannot encode invoice: fields cannot be represented as strict UTF-8 JSON.") from exc
     decode_invoice(raw)
-    return raw
-
-
-def invoice_signing_message(raw: bytes, *, domain: bytes) -> bytes:
-    """Prepend the caller's trusted domain exactly, without adding delimiters."""
-    if type(domain) is not bytes:
-        raise TypeError("Invoice signing domain must be supplied as exact bytes.")
-    if not domain:
-        raise ValueError("Cannot construct invoice signing message: the signing domain must not be empty.")
-    decode_invoice(raw)
-    return domain + raw
-
-
-def invoice_hash(raw: bytes, *, domain: bytes) -> str:
-    """Return the voucher/API hash of a well-formed invoice, without authenticating it."""
-    return "0x" + hashlib.sha256(invoice_signing_message(raw, domain=domain)).hexdigest()
-
-
-def sign_invoice_detached(raw: bytes, private_key: Ed25519PrivateKey, *, domain: bytes) -> bytes:
-    """Sign a validated original document; return its detached 64-byte signature.
-
-    The private key must match provider. The issuer owns that key's authority.
-    This function performs no I/O, persistence, enrollment or key lookup.
-    """
-    message = invoice_signing_message(raw, domain=domain)
-    if not isinstance(private_key, Ed25519PrivateKey):
-        raise TypeError("Invoice signing requires an Ed25519 private key.")
-    _require_provider(raw, private_key.public_key())
-    return private_key.sign(message)
-
-
-def encode_envelope(raw: bytes, signature: bytes) -> bytes:
-    """Encode validated invoice/signature bytes; this does not authenticate them."""
-    decode_invoice(raw)
-    if type(signature) is not bytes:
-        raise TypeError("Invoice envelope signature must be supplied as bytes.")
-    if len(signature) != 64:
-        raise InvoiceError("Cannot encode invoice envelope: Ed25519 signature must contain exactly 64 bytes.")
-    envelope = {
-        "bytes": base64.b64encode(raw).decode("ascii"),
-        "signature": base64.b64encode(signature).decode("ascii"),
-    }
-    return json.dumps(envelope, separators=(",", ":")).encode("ascii")
-
-
-def sign_invoice(raw: bytes, private_key: Ed25519PrivateKey, *, domain: bytes) -> bytes:
-    """Sign unchanged invoice bytes and return the compact JSON envelope."""
-    signature = sign_invoice_detached(raw, private_key, domain=domain)
-    return encode_envelope(raw, signature)
-
-
-def _base64(value, limit, field):
-    if type(value) is not str or len(value) > 4 * ((limit + 2) // 3):
-        raise InvoiceError(f"Cannot decode invoice envelope: {field} must be bounded standard base64.")
-    try:
-        decoded = base64.b64decode(value, validate=True)
-    except (ValueError, binascii.Error) as exc:
-        raise InvoiceError(f"Cannot decode invoice envelope: {field} is not standard base64.") from exc
-    if len(decoded) > limit or base64.b64encode(decoded).decode("ascii") != value:
-        raise InvoiceError(f"Cannot decode invoice envelope: {field} is not canonical padded base64 within its limit.")
-    return decoded
-
-
-def decode_envelope(envelope: bytes) -> tuple[bytes, bytes]:
-    """Return validated (invoice, signature) bytes without authenticating them.
-
-    Supply original JSON bytes to retain duplicate-member rejection. The
-    transport boundary owns the overall body limit, including whitespace.
-    """
-    envelope = _load(envelope)
-    if type(envelope) is not dict or envelope.keys() != {"bytes", "signature"}:
-        raise InvoiceError("Cannot decode invoice envelope: envelope must contain exactly bytes and signature.")
-    raw = _base64(envelope["bytes"], MAX_BYTES, "bytes")
-    signature = _base64(envelope["signature"], 64, "signature")
-    if len(signature) != 64:
-        raise InvoiceError("Cannot decode invoice envelope: Ed25519 signature must contain exactly 64 bytes.")
-    decode_invoice(raw)
-    return raw, signature
-
-
-def _require_provider(raw: bytes, public_key: Ed25519PublicKey) -> None:
-    provider = decode_invoice(raw)["provider"]
-    encoded = base64.urlsafe_b64encode(public_key.public_bytes_raw()).rstrip(b"=").decode("ascii")
-    if provider != encoded:
-        raise InvoiceError("Cannot authenticate invoice: provider differs from the signature key.")
-
-
-def verify_invoice(
-    envelope: bytes,
-    *,
-    domain: bytes,
-    public_key: Ed25519PublicKey,
-) -> bytes:
-    """Bind provider to the caller-trusted Ed25519 key; return authenticated bytes.
-
-    Pass the original envelope JSON bytes so duplicate members cannot be lost.
-    The HTTP boundary owns the overall body limit. Enrollment, retirement/
-    compromise policy and payment admission are the caller's responsibilities.
-    """
-    raw, signature = decode_envelope(envelope)
-    if not isinstance(public_key, Ed25519PublicKey):
-        raise TypeError("Invoice verification requires a trusted Ed25519 public key.")
-    _require_provider(raw, public_key)
-    try:
-        public_key.verify(signature, invoice_signing_message(raw, domain=domain))
-    except InvalidSignature as exc:
-        raise InvoiceError("Cannot verify invoice: signature does not match the trusted provider key and exact bytes.") from exc
     return raw

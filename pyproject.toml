@@ -4,11 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signed-invoice"
-version = "0.2.0"
-description = "Strict exact-byte merchant invoices and Ed25519 envelopes"
+version = "0.3.0"
+description = "Strict five-field invoice payloads and Ed25519 JWS artifacts"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["cryptography==50.0.2"]
+
+[project.optional-dependencies]
+pydantic = ["pydantic==2.13.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

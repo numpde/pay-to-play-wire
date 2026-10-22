@@ -299,6 +299,7 @@ esac
         (self.root / ".work/invoice/wheels").mkdir()
         shutil.copyfile("tools/ops/package.py", self.root / "tools/ops/package.py")
         shutil.copyfile("requirements/runtime.lock", self.root / "requirements/runtime.lock")
+        shutil.copyfile("requirements/pydantic.lock", self.root / "requirements/pydantic.lock")
         result = subprocess.run(
             ["bash", str(self.root / "tools/ops/invoice.sh"), "--print", "test/package"],
             cwd=self.root,

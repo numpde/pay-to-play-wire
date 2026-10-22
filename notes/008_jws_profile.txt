@@ -1,0 +1,186 @@
+Invoice JWS profile and 0.3.0 cutover
+====================================
+
+Authority and completion contract
+----------------------------------
+Mail's user authorized shared JWS implementation and coordination with both
+consumer owners. The approved full-artifact identity and proposed profile were
+read from agent-mail notes/057_signed_invoice_standard.txt on 2026-10-22.
+The shared owner confirms application/vnd.signed-invoice.v1+json as an
+application profile name, not a registered media type. RFC 7515 specifies JWS;
+RFC 9864 registers the fully specified Ed25519 algorithm. Their primary texts:
+https://www.rfc-editor.org/rfc/rfc7515
+https://www.rfc-editor.org/rfc/rfc9864
+
+Completed source must have one authoritative signed artifact with no cached
+mutable document or parallel trusted hash, no custom domain-prefix path,
+and no legacy emission/verification. Pydantic must be optional and project
+the same core artifact, without a second Mail-owned wire model. Every consumer
+still owns raw HTTP parsing, trusted provider authorization and product policy.
+Publication requires committed-source offline qualification and downloaded
+draft-asset verification; published 0.2.0 and earlier assets remain unchanged.
+
+Core API and exact bytes
+-------------------------
+The final framework-neutral class name is signed_invoice.SignedInvoice.
+It is a frozen slotted dataclass carrying exactly protected, payload and
+signature strings. Construction validates profile/encoding/payload grammar,
+not cryptographic authenticity. from_json(bytes) parses flattened JSON;
+from_compact(str) parses compact form. to_dict()/to_json() preserve the carried
+segments. compact is text; payload_bytes and signing_input are bytes.
+document is a fresh dictionary; invoice_hash is 0x plus 64 lowercase hex digits.
+No InvoiceArtifact alias was introduced after the naming discussion settled.
+
+sign_invoice(payload_bytes, Ed25519PrivateKey) returns SignedInvoice.
+verify_invoice(artifact, public_key=Ed25519PublicKey) authenticates it and returns
+the fresh document, requiring provider to equal the actual trusted signature
+key. invoice_hash(artifact) also exposes the full-artifact identity.
+encode_invoice/decode_invoice and scalar helpers retain the same five fields,
+arbitrary service values and lossless JsonNumber tokens. Mandatory runtime
+dependency remains cryptography 50.0.2. Backend/key failures are not hidden.
+
+The canonical emitted protected JSON is:
+{"alg":"Ed25519","typ":"application/vnd.signed-invoice.v1+json"}
+It is encoded as unpadded canonical base64url, as are payload and signature.
+Header parsing requires exactly those two parameters and exact alg Ed25519.
+RFC 7515 section 4.1.9 requires media-type comparison without case sensitivity
+and interpretation of an omitted application/ prefix. Those equivalent typ
+spellings are accepted, preserving their original protected segment and distinct
+identity. No header is reserialized for verification or identity.
+
+Signing input: ASCII(protected + "." + payload).
+Compact artifact: protected + "." + payload + "." + signature.
+Invoice identity: 0x + lowercase SHA-256 of ASCII(compact artifact).
+The signature is therefore part of invoice identity. Outer JSON whitespace,
+member order and equivalent escaping are outside identity. A hash alone is
+not authentication, and distinct artifacts do not establish distinct services.
+
+Limits: decoded header 256 bytes; encoded protected at most 342 characters;
+payload remains at most 16384 bytes and depth 16 (root 1); encoded payload
+at most 21846 characters; signature exactly 64 bytes / 86 encoded characters;
+compact form at most 22276 characters; raw flattened JSON at most 32768 bytes
+before parsing. Duplicate decoded names, malformed UTF-8/JSON, BOMs, nonfinite
+numbers and unpaired surrogates remain rejected. No detached payload, general
+serialization, unprotected header, key selector, crit or b64 extension is accepted.
+
+Optional adapter and duplicate boundary
+----------------------------------------
+signed_invoice.pydantic.SignedInvoiceValue is Annotated[SignedInvoice, adapter].
+The adapter derives its required field names and string bounds from dataclass
+fields, delegates semantic validation to the core constructor and serializes
+directly with to_dict. It returns a core artifact, not a mirror Pydantic model.
+The pydantic extra selects 2.13.4; no FastAPI dependency is added.
+
+Pydantic and FastAPI mappings have already lost raw duplicate-member names.
+The adapter cannot recover that evidence, including when Pydantic parses JSON.
+Raw HTTP JSON owners must reject duplicate names before framework parsing.
+Core from_json still rejects raw envelope duplicates, and the core always
+sees original decoded protected/payload bytes for their duplicate rejection.
+This distinction was sent to Mail and is covered explicitly by adapter tests.
+
+Provenance and deliberate adaptations
+--------------------------------------
+Starting source was signed-invoice d361225e0284364c7c85af68eb594658219b293b.
+Retained the existing strict payload/JSON owner and five-field scalar rules;
+removed the entire custom domain-prefix, detached-signature and old envelope
+API. New jws.py expresses the fixed RFC signing input with existing standard
+base64/hash facilities and cryptography Ed25519. No custom crypto was added.
+Canonical key decoding remains adapted from the Mail owner recorded in 007.
+Payload rejection scenarios were preserved during test reorganization.
+
+Pydantic's supported Annotated/core-schema integration was checked against
+actual locked Pydantic 2.13.4 / pydantic-core 2.46.4 in maintained containers.
+Schema fields are derived from the core dataclass; type/JSON/profile checking
+delegates to the core owner. No Pydantic import occurs in the base package.
+
+Independent Python JOSE tests use joserfc 1.7.5's native RFC 9864 Ed25519
+algorithm allowlist, deserialize/serialize both flattened and compact JWS,
+and compare exact regenerated artifacts to the installed vector expectations.
+The package is a development interoperability dependency, not a runtime owner.
+
+Dependency acquisition and qualification
+-----------------------------------------
+Retained cryptography 50.0.2 and its locked cffi 2.1.1 / pycparser 3.11 closure,
+Ruff 0.15.15 and setuptools 82.0.1. Existing exact-version advisory review and
+the ASCII-only Linux manifest-exclusion limitation remain recorded in 007.
+Before acquiring/installing the new closure, exact OSV queries on 2026-10-22
+returned no matches for pydantic 2.13.4, pydantic-core 2.46.4, annotated-types
+0.8.0, typing-extensions 4.16.0, typing-inspection 0.4.4 and joserfc 1.7.5.
+Hashes/versions were copied from Mail's existing reviewed runtime lock.
+
+Acquired explicitly with make dependencies/download NETWORK_INTERFACE=wlp1s0.
+Verified actual acquired bytes offline with make dependencies/check, then ran
+the separate explicit make build/image. Ordinary test targets do not acquire
+packages or build images. Previous tool wheels were retained separately.
+New admitted image:
+sha256:2ef4572b04b76a776446874fac30253ed7b0ac782c0a9ada743c450820be2d40
+
+The source-free package checker first installs only the base runtime lock and
+proves Pydantic is absent while the JWS core/vectors work. It verifies original
+and sdist-rebuilt wheel payload equality and metadata including optional-extra
+declarations. Only then does it explicitly install the hash-locked optional
+adapter closure inside the same isolated offline checker and exercise strict
+schema, core artifacts, JSON round trips and serialization. All mounts remain
+read-only and no source tree is imported by the installed runtime.
+
+Independent JavaScript JOSE evidence
+--------------------------------------
+Authoritative new vector resource SHA-256:
+a83eaebab9e17bd5320d29c17ea1d40398cae8715d9e1b90e5698adfb829dc2f
+Native full-artifact hash:
+0x6e27a482816c7592f8c08421db21ab5837da7545cdfa54b9904877609fb423c7
+ERC20 full-artifact hash:
+0x2f08846d48c086260d992f0f794a7fb023751e38790f53a6f0c41c42d99e36ad
+
+A separate agent acquired official jose 6.2.13 only through its explicit Make
+acquisition target with NETWORK_INTERFACE=wlp1s0, after exact-version OSV
+review returned no match. The package declares no dependencies; no npm install
+or lifecycle script ran. Original archive size 49879 bytes. Published SHA-512
+integrity was checked offline before extraction/execution:
+7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==
+Archive SHA-256:
+f070cea39a544b750514d14e9697b5305aa0564804f319f05b266a1e35761f89
+All 80 extracted ordinary files were byte-compared against archive members
+before import. Before/after extracted-file manifest fingerprint:
+b0779374c306170f990a8290cab2e8819a96363ef07496ffee44d988707ce7a6
+
+The probe reused the maintained dapp32 Node package-test image by immutable ID:
+sha256:7266ae0983961960bc9cb7f11e833b6b533e4c41ecfcb9dd12b19883e09d81ce
+Node 24.22.0 / OpenSSL 3.5.8. Runtime was offline, nonroot, read-only root and
+exact inputs, capabilities dropped, no new privileges and bounded resources.
+No consumer source, credentials, engine socket, devices or ports were mounted.
+
+Native jose Ed25519 support verified and regenerated both flattened and compact
+artifacts exactly from RFC 8032 test seed 1. It independently checked complete
+compact hashes, outer JSON order invariance, signature-mutation rejection and
+hash changes, and algorithm allowlist rejection. Expected typ was checked
+explicitly after generic cryptographic verification; generic JWS verification
+does not itself enforce application type policy. No custom algorithm fallback.
+
+Retained local exact probe, Makefile, archive, metadata and receipts:
+.work/validation/jws-oracle/
+Makefile SHA-256:
+af6eaa6468f8937af964995a67544412dc693a181827c68d88ac3b777e34a2a1
+Probe SHA-256:
+9d6c9b9f962803d4612a2028416f3217a02525440e31e00312b961936f64847d
+Interop receipt SHA-256:
+d4235e65f85d8fe4803778ff3649dc45277257d028a7fcba0d5dfe59387a59c3
+Archive integrity receipt SHA-256:
+61664b6ee38049f9b7e22ce60c557376905378f9663aed9b05473f81340e604c
+
+Consumer ownership and publication status
+-----------------------------------------
+Mail received the fixed API and owns its application/persistence/HTTP cutover.
+P2P owns the separate standalone signed-voucher / signed_voucher distribution,
+its contract-authoritative typed-data schema and registered-signer/domain
+verification. Ethereum dependencies and voucher schema were removed from this
+invoice vector resource rather than retained as competing shared authority.
+New full-artifact hashes were sent to the P2P owner for its own qualified vectors.
+
+Candidate lint, 43 repository checks, 41 invoice checks, independent Python/JS
+JOSE interop and source-free base/optional installed-artifact checks passed.
+An independent source reviewer found no concrete implementation defect; its
+one missing separate price/asset mutation proof was restored. Final frozen
+qualification and verified release identities will be recorded after publication.
+No consumer deployment, admission, fulfillment, voucher or settlement proof is
+claimed by the JWS package qualification.

@@ -58,7 +58,9 @@ new list items and fenced code blocks retain their structural line breaks.
 `test/package` consumes previously built artifacts without mounting source. It
 captures and verifies the artifact bytes, rebuilds a wheel from the sdist offline,
 and checks both wheels in a fresh contained environment. The checks cover import
-origin, metadata, dependencies, payload, resources and cryptographic operations.
+origin, metadata, dependencies, payload, resources and JWS operations. It proves
+the core works without Pydantic, then installs the locked optional adapter closure
+offline and checks its strict JSON, schema and serialization behavior.
 
 ## Artifacts and releases
 

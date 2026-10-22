@@ -6,8 +6,9 @@ schemas, persistence, consent, admission, fulfillment and settlement.
 
 Copy established owners from the recorded source repositories before inventing replacements.
 Record the source revision and deliberate adaptations. Preserve original bytes
-and distinct rejection scenarios. Applications supply the trusted signing domain
-explicitly; never add a branded default, infer it from an invoice or add delimiters.
+and distinct rejection scenarios. Require the fixed Ed25519 JWS protected profile;
+applications supply trusted provider keys and own their authorization. Preserve
+carried segments and hash the complete compact signed artifact. No legacy domains.
 
 Make is the supported interface; help is the default and needs no prerequisites.
 Run all project Python, lint, tests, builds and packaging inside the maintained

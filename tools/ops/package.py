@@ -84,6 +84,8 @@ def _check_captured_artifacts(artifacts):
         "signed_invoice/codec.py",
         "signed_invoice/errors.py",
         "signed_invoice/fields.py",
+        "signed_invoice/jws.py",
+        "signed_invoice/pydantic.py",
         "signed_invoice/vectors/invoice.json",
     }
     with zipfile.ZipFile(wheel) as archive:
@@ -174,24 +176,31 @@ import json
 import sys
 from pathlib import Path
 import signed_invoice
-from signed_invoice import InvoiceError, JsonNumber, decode_invoice, encode_invoice, invoice_hash, encode_envelope, sign_invoice, verify_invoice
+from signed_invoice import InvoiceError, JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 import base64
 distribution = importlib.metadata.distribution('signed-invoice')
 project = json.loads(sys.argv[1])
 assert distribution.version == project['version']
-assert distribution.requires == project['dependencies']
+expected_requires = project['dependencies'] + [
+    requirement + '; extra == "' + extra + '"'
+    for extra, requirements in project.get('optional-dependencies', {}).items() for requirement in requirements
+]
+assert distribution.requires == expected_requires
+assert distribution.metadata.get_all('Provides-Extra') == list(project.get('optional-dependencies', {}))
 assert distribution.metadata['Requires-Python'] == project['requires-python']
 assert Path(signed_invoice.__file__).resolve().is_relative_to(Path(sys.prefix))
 for development_module in ('tools', 'tests'):
     assert importlib.util.find_spec(development_module) is None, f"Installed runtime can import development module {development_module!r}."
+assert importlib.util.find_spec('pydantic') is None, 'Core installation unexpectedly requires Pydantic.'
 vectors = json.loads(importlib.resources.files('signed_invoice').joinpath('vectors/invoice.json').read_bytes())
-domain = vectors['invoicePrefixUtf8'].encode()
 for obsolete in ('validate_payment_route', 'require_merchant_id', 'require_identifier',
-                 'require_evm_address', 'require_uint256', 'require_deadline', 'NATIVE_ASSET'):
+                 'require_evm_address', 'require_uint256', 'require_deadline', 'NATIVE_ASSET',
+                 'invoice_signing_message', 'sign_invoice_detached', 'encode_envelope', 'decode_envelope'):
     assert not hasattr(signed_invoice, obsolete)
 for case in vectors['cases']:
-    raw = case['invoiceUtf8'].encode()
+    raw = case['payloadUtf8'].encode()
+    artifact = SignedInvoice(**case['invoice'])
     fields = decode_invoice(raw)
     assert signed_invoice.require_public_key(fields['provider']) == fields['provider']
     assert signed_invoice.require_public_key(fields['beneficiary']) == fields['beneficiary']
@@ -199,20 +208,24 @@ for case in vectors['cases']:
     assert signed_invoice.require_amount(fields['payment']['amount']) == fields['payment']['amount']
     assert signed_invoice.require_best_before(fields['bestBefore']) == fields['bestBefore']
     assert raw == encode_invoice(fields)
-    assert case['invoiceHash'] == invoice_hash(raw, domain=domain)
+    assert raw == artifact.payload_bytes
+    assert case['compact'] == artifact.compact
+    assert case['invoiceHash'] == invoice_hash(artifact)
     key = Ed25519PublicKey.from_public_bytes(base64.urlsafe_b64decode(fields['provider'] + '='))
-    signature = base64.b64decode(case['signatureBase64'])
-    assert raw == verify_invoice(encode_envelope(raw, signature), domain=domain, public_key=key)
+    assert fields == verify_invoice(artifact, public_key=key)
+    assert artifact == SignedInvoice.from_json(artifact.to_json())
+    assert artifact == SignedInvoice.from_compact(artifact.compact)
     for service in (None, [], True, 'text', JsonNumber('1.234567890123456789e99999')):
         changed = dict(fields, bestBefore=0, service=service)
         assert service == decode_invoice(encode_invoice(changed))['service']
     other = Ed25519PrivateKey.generate()
     fresh = dict(fields, provider=base64.urlsafe_b64encode(other.public_key().public_bytes_raw()).rstrip(b'=').decode())
     fresh_raw = encode_invoice(fresh)
-    assert fresh_raw == verify_invoice(sign_invoice(fresh_raw, other, domain=domain), domain=domain, public_key=other.public_key())
-    forged = encode_envelope(raw, other.sign(domain + raw))
+    assert fresh == verify_invoice(sign_invoice(fresh_raw, other), public_key=other.public_key())
+    signature = base64.urlsafe_b64encode(other.sign(artifact.signing_input)).rstrip(b'=').decode()
+    forged = SignedInvoice(artifact.protected, artifact.payload, signature)
     try:
-        verify_invoice(forged, domain=domain, public_key=other.public_key())
+        verify_invoice(forged, public_key=other.public_key())
     except InvoiceError:
         pass
     else:
@@ -223,7 +236,7 @@ for case in vectors['cases']:
         pass
     else:
         raise AssertionError('A legacy version member was accepted.')
-print('Installed origin, metadata, resources, final grammar and provider-bound verification passed.')
+print('Installed core without Pydantic: origin, metadata, JWS vectors, full identity and provider binding passed.')
 """
         for candidate in (wheel, rebuilt[0]):
             execute(
@@ -245,6 +258,56 @@ print('Installed origin, metadata, resources, final grammar and provider-bound v
             )
             execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
             execute([runtime, "-I", "-B", "-c", code, json.dumps(project)], cwd=root)
+        execute(
+            [
+                runtime,
+                "-I",
+                "-m",
+                "pip",
+                "install",
+                "--no-index",
+                "--no-cache-dir",
+                "--disable-pip-version-check",
+                "--only-binary=:all:",
+                "--require-hashes",
+                "--find-links",
+                "/dependencies",
+                "-r",
+                "/input/pydantic.lock",
+            ],
+            cwd=root,
+        )
+        execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
+        optional_code = """
+import importlib.resources
+import json
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
+from signed_invoice import SignedInvoice
+from signed_invoice.pydantic import SignedInvoiceValue
+class Response(BaseModel):
+    model_config = ConfigDict(strict=True, extra='forbid')
+    invoice: SignedInvoiceValue
+adapter = TypeAdapter(SignedInvoiceValue)
+schema = adapter.json_schema()
+assert schema['additionalProperties'] is False
+assert set(schema['required']) == {'protected', 'payload', 'signature'}
+vectors = json.loads(importlib.resources.files('signed_invoice').joinpath('vectors/invoice.json').read_bytes())
+for case in vectors['cases']:
+    artifact = SignedInvoice(**case['invoice'])
+    response = Response(invoice=artifact)
+    assert type(response.invoice) is SignedInvoice
+    assert response.model_dump() == {'invoice': artifact.to_dict()}
+    assert response == Response.model_validate_json(response.model_dump_json())
+    assert adapter.validate_json(artifact.to_json()) == artifact
+    try:
+        adapter.validate_python(dict(artifact.to_dict(), signature='AA'))
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError('Installed optional adapter accepted a malformed signature segment.')
+print('Installed optional Pydantic adapter: strict core artifacts, JSON, schema and serialization passed.')
+"""
+        execute([runtime, "-I", "-B", "-c", optional_code], cwd=root)
 
 
 if __name__ == "__main__":
