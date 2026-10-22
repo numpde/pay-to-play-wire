@@ -1,0 +1,61 @@
+Uniform artifact interfaces, 2026-10-22
+
+Completion contract
+Both SignedInvoice and SignedVoucher provide from_dict/from_json and to_dict/to_json,
+plus framework-neutral json_schema. Both optional Pydantic annotations delegate to
+these methods through one adapter. Protocol parsing remains authoritative; schema
+projection and framework integration never authenticate or select trusted keys.
+Existing segment bytes, signatures, hashes, ordered EIP-712 types and rejection
+scenarios must remain intact. Base invoice imports must not acquire optional imports.
+
+Provenance and adaptations
+Copy and edit the existing 0.4.0 owners at source revision
+1f4c3605baf659ed11a1eedc5b38cff41b0e6ab0. Its donor provenance is in note 010.
+Move voucher.py into voucher/codec.py, retaining the public wire.voucher imports;
+the package permits the matching wire.voucher.pydantic entrypoint. Replace the
+invoice-specific adapter with a shared field-independent bridge. Derive invoice
+schema fields and bounds from dataclass metadata; voucher schema fields and order
+from the existing ordered contract definition and lexical constants. The small
+object-schema helper derives required names from its properties, without becoming
+a schema interpreter or participating in runtime validation.
+
+The framework's strict dictionary boundary rejects wrong outer input types before
+the core mapping parser. Malformed mapping content raises the existing protocol
+ValueError family, so no catch-and-rethrow wrapper is needed for TypeError.
+
+Evolution and limits
+Changing an invoice dataclass field bound changes its schema and adapter projection.
+Changing a contract field's order or lexical kind changes its schema projection;
+the fixed profile still requires deliberate protocol qualification. Voucher's two
+transport keys remain explicit local protocol spelling. JSON Schema describes lexical
+structure, not the uint256 ceiling, low-s scalars or decoded JWS validity. Raw duplicate
+members can only be rejected before framework parsing, through from_json on original
+bytes or the application's containing JSON owner. No new dependencies or locks.
+
+Qualification
+The initial unmodified 0.4.0 maintained suite passed after the donor checkout
+deletion, including eight installed profiles. Candidate source checks passed
+lint, 44 invoice tests, 18 voucher tests and 52 repository tests. Candidate
+wheel/sdist checks passed all eight installed profiles, including invoice mapping
+and schema methods without Pydantic and both optional annotations. The installed
+candidate preceded deletion of the redundant adapter catch and derivation of
+the uint256 digit count; frozen release qualification must cover those final edits.
+
+Sequential QA/QC
+End-state review confirmed one protocol owner per artifact, preserved exports,
+fresh schema ownership and no schema-driven runtime validation. Its two findings
+were resolved: core methods now run in the installed base profile, and the guide
+labels its candidate additions until the released URL/hash can replace the old pin.
+Code-beauty and anti-slop review removed an unnecessary TypeError translation:
+strict framework dictionary parsing already owns that input-type rejection.
+The public APIs are explicitly requested; the shared bridge has both actual
+artifact consumers, while schema object projection serves both profiles.
+Recent source history shows protocol ownership migration, not a new general
+framework. No compatibility namespace, fallback, new dependency or waiver.
+Helpful-error review preserves TypeError versus protocol ValueError contracts,
+safe fixed diagnostics and existing deliberate backend translations. Container
+review found no changed authority grants; the maintained repository checks
+observed live identity, network, mounts, capability and resource constraints.
+Documentation review checked the APIs against source and explicitly distinguishes
+parsing, schema projection and authentication. No deployment or settlement proof
+is claimed. Final frozen qualification and public receipts remain to be recorded.

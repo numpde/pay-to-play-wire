@@ -34,7 +34,7 @@ read-only exact inputs/root, dropped capabilities, no new privileges and bounded
 resources. Do not mount credentials, engine sockets, private checkout state or
 devices. Validate paths/ownership and retain evidence when cleanup is uncertain.
 
-Use src/wire/invoice and src/wire/voucher.py; tests/invoice and tests/voucher for normative/adversarial/integration
+Use src/wire/invoice and src/wire/voucher; tests/invoice and tests/voucher for normative/adversarial/integration
 campaigns, tests/repository for actual workflow policy and tests/helpers for
 reusable setup. Add categories only when populated. Shared interoperability
 vectors are package data under src/wire/vectors so installed consumers

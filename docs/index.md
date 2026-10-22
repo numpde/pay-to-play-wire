@@ -15,10 +15,10 @@ The package's dependency selections are:
 wire                    # Invoice support; cryptography is the only direct dependency.
 wire[pydantic]          # Invoice Pydantic/OpenAPI adapter.
 wire[voucher]           # EIP-712 voucher backend, including transitive Pydantic.
-wire[pydantic,voucher]  # Both integrations from the same release.
+wire[pydantic,voucher]  # Both backends and their Pydantic/OpenAPI adapters.
 ```
 
-These names describe dependency selections. The immutable base wheel requirement is:
+This guide describes the 0.5.0 candidate, including uniform mapping/schema methods and the voucher Pydantic annotation. The published 0.4.0 baseline below predates those additions; its immutable requirement is retained until 0.5.0 publication is verified.
 
 ```text
 wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.4.0/wire-0.4.0-py3-none-any.whl#sha256=7b58c25ed49f94e0c2194b8899c0d49e672bd768432186bdc2be2d29c67d8ffe
@@ -115,9 +115,21 @@ class Response(BaseModel):
     invoice: SignedInvoiceValue
 ```
 
-The field validates three-string mappings or core `SignedInvoice` values, returns a core artifact and serializes it as the flattened object. Its required fields and bounds are projected from the core artifact; protocol semantics delegate to the same constructor. Pydantic/FastAPI can generate the extra-forbidden object schema from this annotation. Applications need no local JWS mirror model. Validation is structural and does not verify a provider signature or authorization.
+The field validates three-string mappings or core `SignedInvoice` values, returns a core artifact and serializes it as the flattened object. Its required fields and bounds are projected from the core artifact; protocol semantics delegate to `SignedInvoice.from_dict`. Pydantic/FastAPI can generate the extra-forbidden object schema from this annotation. Applications need no local JWS mirror model. Validation is structural and does not verify a provider signature or authorization.
 
-**Raw duplicate-member protection belongs before framework JSON parsing.** Pydantic/FastAPI mapping inputs have already lost duplicate-name information; even Pydantic's JSON validation cannot restore it. The raw HTTP JSON owner must reject duplicate names before passing the parsed request to the adapter. `SignedInvoice.from_json(original_bytes)` enforces that rule for a standalone flattened artifact. Encoded protected-header and payload JSON remain duplicate-aware in the shared codec because their original bytes are available.
+Both signed artifact types expose the same transport methods: `from_dict(mapping)`, `from_json(bytes)`, `to_dict()`, `to_json()` and `json_schema()`. The schema method needs no Pydantic dependency and returns a fresh JSON Schema object. Schemas describe wire structure and lexical bounds; core parsing additionally enforces decoded JWS profiles, the uint256 ceiling and contract signature form. Schema validation alone does not establish those rules or authenticate a signature.
+
+For vouchers, select `wire[pydantic,voucher]` and use `wire.voucher.pydantic.SignedVoucherValue` in exactly the same way. Both annotations use one framework bridge that delegates mapping validation, serialization and schema presentation to the corresponding core artifact. Neither adapter stores an independent field model or chooses trusted keys.
+
+```python
+from wire.voucher.pydantic import SignedVoucherValue
+
+class PurchaseRequest(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    voucher: SignedVoucherValue
+```
+
+**Raw duplicate-member protection belongs before framework JSON parsing.** Pydantic/FastAPI mapping inputs have already lost duplicate-name information; even Pydantic's JSON validation cannot restore it. The raw HTTP JSON owner must reject duplicate names before passing the parsed request to the adapter. `SignedInvoice.from_json(original_bytes)` and `SignedVoucher.from_json(original_bytes)` enforce that rule for standalone artifacts. Encoded protected-header and payload JSON remain duplicate-aware in the shared codec because their original bytes are available.
 
 ## Sign and verify a voucher
 

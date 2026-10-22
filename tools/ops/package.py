@@ -233,6 +233,9 @@ for case in vectors['cases']:
     key = Ed25519PublicKey.from_public_bytes(base64.urlsafe_b64decode(fields['provider'] + '='))
     assert fields == verify_invoice(artifact, public_key=key)
     assert artifact == SignedInvoice.from_json(artifact.to_json())
+    assert artifact == SignedInvoice.from_dict(artifact.to_dict())
+    assert SignedInvoice.json_schema()['required'] == list(artifact.to_dict())
+    assert 'pydantic' not in sys.modules, 'Core schema generation loaded Pydantic.'
     assert artifact == SignedInvoice.from_compact(artifact.compact)
     for service in (None, [], True, 'text', JsonNumber('1.234567890123456789e99999')):
         changed = dict(fields, bestBefore=0, service=service)
@@ -278,6 +281,7 @@ for case in vectors['cases']:
     assert response.model_dump() == {'invoice': artifact.to_dict()}
     assert response == Response.model_validate_json(response.model_dump_json())
     assert adapter.validate_json(artifact.to_json()) == artifact
+    assert adapter.json_schema() == SignedInvoice.json_schema()
     try:
         adapter.validate_python(dict(artifact.to_dict(), signature='AA'))
     except ValidationError:
@@ -303,6 +307,7 @@ for case in vectors['cases']:
     assert artifact.typed_data == data
     assert case['digest'] == '0x' + artifact.digest.hex()
     assert artifact == SignedVoucher.from_json(artifact.to_json())
+    assert artifact == SignedVoucher.from_dict(artifact.to_dict())
     assert verify_voucher(artifact, expected_domain=domain, expected_signer=bytes.fromhex(vectors['testSigner'][2:])) is None
     try:
         verify_voucher(artifact, expected_domain=domain, expected_signer=bytes(20))
@@ -318,6 +323,32 @@ for case in vectors['cases']:
     else:
         raise AssertionError('A different trusted domain authenticated a voucher.')
 print('Installed voucher: contract digest vectors, transport and explicit signer/domain verification passed.')
+"""
+        voucher_adapter_code = """
+from pydantic import BaseModel, TypeAdapter, ValidationError
+from wire.voucher import SignedVoucher
+from wire.voucher.pydantic import SignedVoucherValue
+class Response(BaseModel):
+    voucher: SignedVoucherValue
+adapter = TypeAdapter(SignedVoucherValue)
+assert adapter.json_schema() == SignedVoucher.json_schema()
+for case in vectors['cases']:
+    data = build_voucher_typed_data(domain=domain, customer=bytes.fromhex(vectors['customer'][2:]),
+        channel_id=int(vectors['channelId']), cumulative_total=int(case['cumulativeTotal']), invoice_hash=bytes.fromhex(case['invoiceHash'][2:]))
+    artifact = sign_voucher(data, bytes.fromhex(vectors['testPrivateKey'][2:]))
+    response = Response(voucher=artifact.to_dict())
+    assert type(response.voucher) is SignedVoucher
+    assert response.voucher == artifact
+    assert response == Response.model_validate_json(response.model_dump_json())
+    assert adapter.validate_json(artifact.to_json()) == artifact
+    assert adapter.dump_python(artifact) == artifact.to_dict()
+    try:
+        adapter.validate_python(dict(artifact.to_dict(), signature='0x00'))
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError('Installed voucher adapter accepted an invalid contract signature.')
+print('Installed voucher Pydantic adapter: core values, JSON, schema and serialization passed.')
 """
         for candidate in (wheel, rebuilt[0]):
             for profile in ((), ("pydantic",), ("voucher",), ("pydantic", "voucher")):
@@ -357,7 +388,7 @@ print('Installed voucher: contract digest vectors, transport and explicit signer
                     if "pydantic" in profile:
                         execute([runtime, "-I", "-B", "-c", optional_code], cwd=root)
                     if "voucher" in profile:
-                        execute([runtime, "-I", "-B", "-c", voucher_code], cwd=root)
+                        execute([runtime, "-I", "-B", "-c", voucher_code + voucher_adapter_code], cwd=root)
 
 
 if __name__ == "__main__":

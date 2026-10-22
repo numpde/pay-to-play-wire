@@ -34,12 +34,14 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual({"invoice": self.artifact.to_dict()}, response.model_dump())
             self.assertEqual({"invoice": self.artifact.to_dict()}, json.loads(response.model_dump_json()))
         self.assertEqual(self.artifact, self.adapter.validate_json(self.artifact.to_json()))
+        self.assertEqual(self.artifact, SignedInvoice.from_dict(self.artifact.to_dict()))
         self.assertEqual(self.artifact.to_dict(), self.adapter.dump_python(self.artifact))
         self.assertEqual(self.artifact.to_dict(), json.loads(self.adapter.dump_json(self.artifact)))
 
     def test_schema_projects_required_fields_and_bounds_from_core_artifact(self):
         for mode in ("validation", "serialization"):
             schema = self.adapter.json_schema(mode=mode)
+            self.assertEqual(SignedInvoice.json_schema(), schema)
             self.assertEqual("object", schema["type"])
             self.assertEqual(False, schema["additionalProperties"])
             self.assertEqual({member.name for member in fields(SignedInvoice)}, set(schema["required"]))
@@ -51,6 +53,15 @@ class AdapterTests(unittest.TestCase):
                 self.assertEqual(member.metadata["max_length"], projected["maxLength"])
             response = Response.model_json_schema(mode=mode)
             self.assertEqual(schema, response["properties"]["invoice"])
+
+    def test_mapping_type_contract_and_fresh_schema(self):
+        for value in (None, [], self.artifact):
+            with self.assertRaises(TypeError):
+                SignedInvoice.from_dict(value)
+        schema = SignedInvoice.json_schema()
+        schema["properties"]["payload"]["maxLength"] = 0
+        schema["required"].clear()
+        self.assertEqual(self.adapter.json_schema(), SignedInvoice.json_schema())
 
     def test_structural_adapter_does_not_authenticate_the_signature(self):
         signature = bytearray(base64.urlsafe_b64decode(self.artifact.signature + "=="))

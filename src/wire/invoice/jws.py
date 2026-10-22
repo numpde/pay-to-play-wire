@@ -9,10 +9,12 @@ import binascii
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+
+from wire._schema import object_schema
 
 from .codec import MAX_BYTES, _load, decode_invoice
 from .errors import InvoiceError
@@ -82,12 +84,41 @@ class SignedInvoice:
             raise TypeError("Invoice JWS JSON must be supplied as exact UTF-8 bytes.")
         if len(raw) > MAX_JSON_BYTES:
             raise InvoiceError("Cannot parse invoice JWS: flattened JSON exceeds 32768 bytes.")
-        fields = _load(raw)
-        if type(fields) is not dict or fields.keys() != {"protected", "payload", "signature"}:
+        document = _load(raw)
+        if type(document) is not dict:
+            raise InvoiceError("Cannot parse invoice JWS: flattened JSON must be an object.")
+        return cls.from_dict(document)
+
+    @classmethod
+    def from_dict(cls, document: dict):
+        """Parse a flattened mapping; raw duplicate detection requires from_json."""
+        if type(document) is not dict:
+            raise TypeError("Invoice JWS mapping must be a dictionary.")
+        if document.keys() != {member.name for member in fields(cls)}:
             raise InvoiceError("Cannot parse invoice JWS: flattened JSON must contain exactly protected, payload and signature.")
-        if any(type(value) is not str for value in fields.values()):
+        if any(type(value) is not str for value in document.values()):
             raise InvoiceError("Cannot parse invoice JWS: all three flattened members must be strings.")
-        return cls(**fields)
+        return cls(**document)
+
+    @classmethod
+    def json_schema(cls):
+        """Describe transport structure; decoded profile and signature checks stay explicit."""
+        schema = object_schema(
+            {
+                member.name: {
+                    "type": "string",
+                    "pattern": "^" + BASE64URL.pattern + "$",
+                    "minLength": member.metadata["min_length"],
+                    "maxLength": member.metadata["max_length"],
+                }
+                for member in fields(cls)
+            }
+        )
+        schema.update(
+            title="SignedInvoice",
+            description="Fixed-profile Ed25519 invoice JWS. Structural validity does not authenticate or authorize the provider.",
+        )
+        return schema
 
     @classmethod
     def from_compact(cls, compact: str):
@@ -120,7 +151,7 @@ class SignedInvoice:
         return invoice_hash(self)
 
     def to_dict(self) -> dict[str, str]:
-        return {"protected": self.protected, "payload": self.payload, "signature": self.signature}
+        return {member.name: getattr(self, member.name) for member in fields(self)}
 
     def to_json(self) -> bytes:
         return json.dumps(self.to_dict(), separators=(",", ":")).encode("ascii")

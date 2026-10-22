@@ -5,7 +5,10 @@
 Development and operations for `wire`, the shared invoice JWS and PayToPlay/2
 voucher package. The base provides `wire.invoice`; extras `pydantic` and
 `voucher` provide the actual adapter and Ethereum backend. Import
-`wire.invoice.pydantic` and `wire.voucher` explicitly. The package owns wire
+`wire.invoice.pydantic`, `wire.voucher` and `wire.voucher.pydantic` explicitly. Both
+artifact types expose `from_dict`, `from_json`, `to_dict`, `to_json` and
+`json_schema`; the Pydantic annotations share one bridge to those core APIs.
+The package owns wire
 rules; applications own authorization, policy, persistence and payment effects.
 
 ## Development
@@ -89,7 +92,7 @@ Set `project.version` in `pyproject.toml` for the next release and commit the
 changes. Publish releases and documentation separately from a clean checkout:
 
 ```sh
-make publish/release TAG=v0.4.0
+make publish/release TAG=v0.5.0
 make publish/pages
 ```
 

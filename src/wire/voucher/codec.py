@@ -14,6 +14,8 @@ from eth_account.messages import encode_typed_data
 from eth_keys.exceptions import BadSignature
 from eth_utils import keccak
 
+from wire._schema import object_schema
+
 # Ordered Solidity types are the only source for schema projections and parsing.
 _SCHEMA = (
     ("EIP712Domain", (("name", "string"), ("version", "string"), ("chainId", "uint256"), ("verifyingContract", "address"))),
@@ -21,9 +23,11 @@ _SCHEMA = (
 )
 _DOMAIN_CONSTANTS = {"name": "PayToPlay", "version": "2"}
 _UINT256_LIMIT = 1 << 256
+_UINT256_DIGITS = len(str(_UINT256_LIMIT - 1))
 _MAX_ARTIFACT_BYTES = 8192
-_DECIMAL = re.compile(r"0|[1-9][0-9]{0,77}", re.ASCII)
+_DECIMAL = re.compile(rf"0|[1-9][0-9]{{0,{_UINT256_DIGITS - 1}}}", re.ASCII)
 _HEX = re.compile(r"0x[0-9a-f]+", re.ASCII)
+_HEX_BYTES = {"address": 20, "bytes32": 32}
 _SECP256K1_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
 
@@ -47,6 +51,10 @@ def _hex(value, length, name):
     if type(value) is not str or len(value) != 2 + length * 2 or _HEX.fullmatch(value) is None:
         raise ValueError(f"Cannot read voucher: {name} must be lowercase 0x-prefixed hex for {length} bytes.")
     return bytes.fromhex(value[2:])
+
+
+def _hex_schema(length):
+    return {"type": "string", "pattern": "^" + _HEX.pattern + "$", "minLength": 2 + 2 * length, "maxLength": 2 + 2 * length}
 
 
 def _object(value, names, name):
@@ -73,8 +81,8 @@ def _typed_data(value):
             if kind == "uint256":
                 if type(item) is not str or _DECIMAL.fullmatch(item) is None or int(item) >= _UINT256_LIMIT:
                     raise ValueError(f"Cannot read voucher: {label} must be a canonical decimal uint256 string.")
-            elif kind in {"address", "bytes32"}:
-                _hex(item, 20 if kind == "address" else 32, label)
+            elif kind in _HEX_BYTES:
+                _hex(item, _HEX_BYTES[kind], label)
             elif item != _DOMAIN_CONSTANTS[name] or type(item) is not str:
                 raise ValueError(f"Cannot read voucher: {label} does not match the PayToPlay/2 contract profile.")
             normalized[name] = item
@@ -164,8 +172,46 @@ class SignedVoucher:
     @classmethod
     def from_json(cls, raw: bytes):
         document = _json(raw)
+        if type(document) is not dict:
+            raise ValueError("Cannot read voucher: artifact must be an object.")
+        return cls.from_dict(document)
+
+    @classmethod
+    def from_dict(cls, document: dict):
+        """Parse a transport mapping; raw duplicate detection requires from_json."""
+        if type(document) is not dict:
+            raise TypeError("Cannot read voucher: artifact mapping must be a dictionary.")
         _object(document, ("typedData", "signature"), "artifact")
         return cls(document["typedData"], document["signature"])
+
+    @classmethod
+    def json_schema(cls):
+        """Describe lexical structure; uint256 bounds and signature rules stay in the parser."""
+        sections = {}
+        for (_type_name, fields), section in zip(_SCHEMA, ("domain", "message"), strict=True):
+            properties = {}
+            for name, kind in fields:
+                if kind == "uint256":
+                    value = {"type": "string", "pattern": "^(?:" + _DECIMAL.pattern + ")$", "maxLength": _UINT256_DIGITS}
+                elif kind in _HEX_BYTES:
+                    value = _hex_schema(_HEX_BYTES[kind])
+                else:
+                    value = {"type": "string", "const": _DOMAIN_CONSTANTS[name]}
+                properties[name] = value
+            sections[section] = object_schema(properties)
+        typed_data = object_schema(
+            {
+                "types": {"const": _types()},
+                "primaryType": {"type": "string", "const": "Voucher"},
+                **sections,
+            }
+        )
+        schema = object_schema({"typedData": typed_data, "signature": _hex_schema(65)})
+        schema.update(
+            title="SignedVoucher",
+            description="Fixed-profile PayToPlay/2 voucher. Structural validity does not authenticate or authorize its signer.",
+        )
+        return schema
 
     @property
     def typed_data(self):
