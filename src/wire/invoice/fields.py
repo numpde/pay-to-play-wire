@@ -3,11 +3,13 @@
 import base64
 import re
 
+from wire._json import MAX_SAFE_INTEGER
+from wire._json import UNSIGNED as UNSIGNED
+
 from .errors import InvoiceError
 
-MAX_TIMESTAMP = (1 << 53) - 1
+MAX_TIMESTAMP = MAX_SAFE_INTEGER
 MAX_AMOUNT_DIGITS = 16384
-UNSIGNED = re.compile(r"0|[1-9][0-9]*")
 POSITIVE = re.compile(r"[1-9][0-9]*")
 PUBLIC_KEY = re.compile(r"[A-Za-z0-9_-]{43}")
 ASSET = re.compile(r"[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}(?:/[-.%a-zA-Z0-9]{1,78})?")

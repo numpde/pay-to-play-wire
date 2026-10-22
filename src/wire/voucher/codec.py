@@ -9,11 +9,6 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from eth_account import Account
-from eth_account.messages import encode_typed_data
-from eth_keys.exceptions import BadSignature
-from eth_utils import keccak
-
 from wire._schema import object_schema
 
 # Ordered Solidity types are the only source for schema projections and parsing.
@@ -227,6 +222,9 @@ class SignedVoucher:
 
     @property
     def digest(self):
+        from eth_account.messages import encode_typed_data
+        from eth_utils import keccak
+
         encoded = encode_typed_data(full_message=self.typed_data)
         return keccak(b"\x19" + encoded.version + encoded.header + encoded.body)
 
@@ -241,6 +239,9 @@ def sign_voucher(typed_data: dict, private_key: bytes) -> SignedVoucher:
     """Sign as the buyer; the caller supplies and retains custody of its key."""
     normalized = _typed_data(typed_data)
     key = _bytes(private_key, 32, "private_key")
+    from eth_account import Account
+    from eth_account.messages import encode_typed_data
+
     signed = Account.sign_message(encode_typed_data(full_message=normalized), private_key=key)
     return SignedVoucher(normalized, "0x" + bytes(signed.signature).hex())
 
@@ -256,6 +257,10 @@ def verify_voucher(artifact: SignedVoucher, *, expected_domain: VoucherDomain, e
         "verifyingContract": "0x" + expected_domain.verifying_contract.hex(),
     }:
         raise ValueError("Cannot verify voucher: its domain differs from the trusted deployment.")
+    from eth_account import Account
+    from eth_account.messages import encode_typed_data
+    from eth_keys.exceptions import BadSignature
+
     try:
         recovered = Account.recover_message(encode_typed_data(full_message=artifact.typed_data), signature=artifact.signature)
     except (BadSignature, ValueError) as exc:

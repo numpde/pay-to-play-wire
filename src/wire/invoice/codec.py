@@ -6,6 +6,8 @@ import json
 import re
 from dataclasses import dataclass
 
+from wire._json import MAX_DEPTH, MAX_DOCUMENT_BYTES, load_json
+
 from .errors import InvoiceError
 from .fields import (
     MAX_TIMESTAMP,
@@ -17,8 +19,7 @@ from .fields import (
 )
 
 # Fixed wire grammar and bounds, independent of payment admission policy.
-MAX_BYTES = 16384
-MAX_DEPTH = 16
+MAX_BYTES = MAX_DOCUMENT_BYTES
 FIELDS = frozenset({"provider", "payment", "bestBefore", "beneficiary", "service"})
 NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 
@@ -40,52 +41,8 @@ class JsonNumber:
             raise InvoiceError("Cannot encode JSON number: expected a finite JSON number token.")
 
 
-def _object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise InvoiceError("Cannot decode invoice JSON: duplicate object member.")
-        result[key] = value
-    return result
-
-
-def _constant(_token):
-    raise InvoiceError("Cannot decode invoice JSON: NaN and Infinity are not JSON numbers.")
-
-
-def _check_tree(value, depth):
-    if isinstance(value, (dict, list)):
-        depth += 1
-        if depth > MAX_DEPTH:
-            raise InvoiceError("Cannot decode invoice JSON: container depth exceeds 16.")
-        if isinstance(value, dict):
-            for key in value:
-                _check_tree(key, depth)
-            children = value.values()
-        else:
-            children = value
-        for child in children:
-            _check_tree(child, depth)
-    elif isinstance(value, str) and any(0xD800 <= ord(char) <= 0xDFFF for char in value):
-        raise InvoiceError("Cannot decode invoice JSON: unpaired Unicode surrogate.")
-
-
 def _load(raw):
-    if type(raw) is not bytes:
-        raise TypeError("Invoice JSON must be supplied as exact UTF-8 bytes.")
-    try:
-        text = raw.decode("utf-8", errors="strict")
-        value = json.loads(
-            text,
-            object_pairs_hook=_object,
-            parse_int=JsonNumber,
-            parse_float=JsonNumber,
-            parse_constant=_constant,
-        )
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
-        raise InvoiceError("Cannot decode invoice JSON: expected strict UTF-8 JSON without a BOM.") from exc
-    _check_tree(value, 0)
-    return value
+    return load_json(raw, error=InvoiceError, name="invoice", number_type=JsonNumber)
 
 
 def decode_invoice(raw: bytes) -> dict:
