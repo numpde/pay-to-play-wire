@@ -1,6 +1,6 @@
 # pay-to-play-wire
 
-`wire` is a Python package for creating, reading and verifying signed service invoices and PayToPlay/2 payment vouchers. Installing it includes both protocols and both Pydantic adapters. Applications supply trusted keys and decide whether to accept a purchase, perform a service or transfer funds.
+`wire` is a Python package for creating, reading and verifying signed service invoices, PayToPlay/2 payment vouchers and signed purchase acceptances. Installing it includes all three formats and their Pydantic adapters. Applications supply trusted keys and decide whether to accept a purchase, perform a service or transfer funds.
 
 **Using the package:** start with the [user guide and runnable examples](https://numpde.github.io/pay-to-play-wire/) ([source](docs/index.md)). This README describes how to develop, test and publish the repository.
 
@@ -43,7 +43,7 @@ make test
 
 `package/build` writes one wheel, one source distribution, `source.json` and `sha256.json` into `.work/dist/`. That directory must be empty before a build. Retain or move earlier output explicitly before rebuilding.
 
-`make test` runs lint, repository checks, invoice tests, voucher tests and installed-package checks. It consumes the previously built artifacts. Focused commands are:
+`make test` runs lint, repository checks, invoice, voucher and acceptance tests, and installed-package checks. It consumes the previously built artifacts. Focused commands are:
 
 ```sh
 make lint/check
@@ -52,13 +52,14 @@ make test/invoice/normative
 make test/invoice/adversarial
 make test/invoice/integration
 make test/voucher
+make test/acceptance
 make test/package
 make vectors/show
 ```
 
-The invoice and voucher tests exercise valid messages and distinct rejection cases. The repository tests check the actual Make workflows and run every Python example in the user guide, in order. `vectors/show` prints invoice inputs and expectations for inspection; it does not rewrite fixtures.
+The protocol tests exercise valid messages and distinct rejection cases. The repository tests check the actual Make workflows and run every Python example in the user guide, in order. `vectors/show` prints invoice and acceptance inputs and expectations for inspection; it does not rewrite fixtures.
 
-`test/package` checks the built distributions without mounting the source package. It verifies their bytes, rebuilds a wheel from the source distribution offline, then installs each wheel in a separate fresh environment. Each installation must supply both protocols and both Pydantic adapters using the ordinary `wire` requirement, without extras. Checks cover dependencies, import locations, metadata, installed test vectors, signing, verification and serialization.
+`test/package` checks the built distributions without mounting the source package. It verifies their bytes, rebuilds a wheel from the source distribution offline, then installs each wheel in a separate fresh environment. Each installation must supply all three formats and their Pydantic adapters using the ordinary `wire` requirement, without extras. Checks cover dependencies, import locations, metadata, installed test vectors, signing, verification and serialization. A separate process blocks Ethereum imports while parsing vouchers and acceptances and verifying acceptance signatures. The complete installation still includes the Ethereum dependencies; only voucher cryptographic operations load them.
 
 `source.json` records the paths and hashes copied before the build backend runs. Distribution contents are compared against that record: omitting the same file from both archives cannot pass merely because the two archives agree. `sha256.json` records hashes of the wheel, source distribution and source inventory.
 

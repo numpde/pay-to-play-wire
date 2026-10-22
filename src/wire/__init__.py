@@ -1,1 +1,1 @@
-"""Purchase wire artifacts; import invoice or voucher support explicitly."""
+"""Purchase wire artifacts; import invoice, voucher or acceptance support explicitly."""

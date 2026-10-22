@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wire"
-version = "0.6.0"
-description = "PayToPlay invoice JWS and EIP-712 voucher wire artifacts"
+version = "0.7.0"
+description = "PayToPlay signed invoices, vouchers and purchase acceptances"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["cryptography==50.0.2", "pydantic==2.13.4", "eth-account==0.14.0", "eth-keys==0.8.0", "eth-utils==6.0.0"]

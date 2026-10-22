@@ -1,6 +1,6 @@
 # pay-to-play-wire
 
-Own the invoice JWS and fixed PayToPlay/2 voucher wire profiles, their parsing,
+Own invoice and purchase-acceptance JWS and fixed PayToPlay/2 voucher wire profiles, their parsing,
 signing, verification and installed interoperability vectors. Applications own
 payment-route qualification, key trust and registered signer authorization, product
 schemas, persistence, consent, admission, fulfillment and settlement.
@@ -13,6 +13,10 @@ carried segments and hash the complete compact signed artifact. No legacy domain
 Voucher verification requires a caller-supplied trusted deployment domain and
 signer. Preserve the EIP-712 ordered schema, digest and contract signature rules.
 No RPC, key registry, secret custody or purchase policy belongs in this package.
+Acceptance carries exactly the full signed voucher and acceptedAt Unix seconds.
+Its trusted Ed25519 key is caller supplied; no signer selector or acceptance hash.
+Structural voucher parsing must not import Ethereum backends. Applications own
+historical voucher-signer authority, fulfillment and all later status policy.
 
 Make is the supported interface; help is the default and needs no prerequisites.
 Run all project Python, lint, tests, builds and packaging inside the maintained
@@ -34,7 +38,7 @@ read-only exact inputs/root, dropped capabilities, no new privileges and bounded
 resources. Do not mount credentials, engine sockets, private checkout state or
 devices. Validate paths/ownership and retain evidence when cleanup is uncertain.
 
-Use src/wire/invoice and src/wire/voucher; tests/invoice and tests/voucher for normative/adversarial/integration
+Use src/wire/invoice, src/wire/voucher and src/wire/acceptance; their matching tests directories hold normative/adversarial/integration
 campaigns, tests/repository for actual workflow policy and tests/helpers for
 reusable setup. Add categories only when populated. Shared interoperability
 vectors are package data under src/wire/vectors so installed consumers
@@ -47,7 +51,7 @@ and each distinct unsafe input rejection. Source and recorded argv are separate
 from live posture and installed-artifact proof. Consumer compatibility requires
 declared immutable inputs; source inspection is not runtime or deployment proof.
 
-Keep errors direct and safe: InvoiceError for invoice protocol failures and
+Keep errors direct and safe: InvoiceError for invoice, AcceptanceError for acceptance and
 ValueError for voucher protocol failures; preserve the qualified TypeError API
 contracts and deliberate backend failure translations. Preserve unrelated
 work. Edit by hand with patches; do not run ad hoc file-rewriting scripts.

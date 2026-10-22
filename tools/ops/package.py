@@ -341,6 +341,77 @@ for case in vectors['cases']:
         raise AssertionError('Installed voucher adapter accepted an invalid contract signature.')
 print('Installed voucher Pydantic adapter: core values, JSON, schema and serialization passed.')
 """
+        acceptance_code = """
+import importlib.abc
+import importlib.resources
+import json
+import sys
+from pathlib import Path
+class NoEthereum(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        root = fullname.split('.')[0]
+        if root.startswith('eth_') or root in {'hexbytes', 'rlp', 'py_ecc', 'ckzg'}:
+            raise AssertionError('Installed acceptance attempted Ethereum import: ' + fullname)
+sys.meta_path.insert(0, NoEthereum())
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from pydantic import BaseModel, TypeAdapter, ValidationError
+import wire.acceptance as acceptance_module
+from wire.acceptance import AcceptanceError, SignedAcceptance, decode_acceptance, encode_acceptance, sign_acceptance, verify_acceptance
+from wire.acceptance.pydantic import SignedAcceptanceValue
+from wire.voucher import SignedVoucher
+assert Path(acceptance_module.__file__).resolve().is_relative_to(Path(sys.prefix))
+class Response(BaseModel):
+    acceptance: SignedAcceptanceValue
+adapter = TypeAdapter(SignedAcceptanceValue)
+assert adapter.json_schema() == SignedAcceptance.json_schema()
+vectors = json.loads(importlib.resources.files('wire').joinpath('vectors/acceptance.json').read_bytes())
+private = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(vectors['testPrivateKey']))
+public = Ed25519PublicKey.from_public_bytes(bytes.fromhex(vectors['testPublicKey']))
+for case in vectors['cases']:
+    raw = case['payloadUtf8'].encode('utf-8')
+    artifact = SignedAcceptance.from_dict(case['acceptance'])
+    assert artifact == sign_acceptance(raw, private)
+    assert artifact == SignedAcceptance.from_json(artifact.to_json())
+    assert artifact == SignedAcceptance.from_compact(artifact.compact)
+    assert raw == artifact.payload_bytes
+    assert json.loads(raw) == verify_acceptance(artifact, public_key=public)
+    assert artifact.voucher == SignedVoucher.from_json(artifact.voucher.to_json())
+    assert json.loads(raw)['voucher']['signature'] == artifact.voucher.signature
+    assert artifact.accepted_at == json.loads(raw)['acceptedAt']
+    response = Response(acceptance=artifact)
+    assert response == Response.model_validate_json(response.model_dump_json())
+    assert artifact == adapter.validate_json(artifact.to_json())
+    try:
+        verify_acceptance(artifact, public_key=Ed25519PrivateKey.generate().public_key())
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Untrusted receipt key authenticated an acceptance.')
+    changed = artifact.document
+    changed['acceptedAt'] += 1
+    payload = sign_acceptance(encode_acceptance(changed), private).payload
+    try:
+        verify_acceptance(SignedAcceptance(artifact.protected, payload, artifact.signature), public_key=public)
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Changed acceptance time retained a valid receipt signature.')
+    changed = artifact.document
+    changed['voucher']['typedData']['domain']['chainId'] = 31337
+    try:
+        decode_acceptance(json.dumps(changed).encode())
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Acceptance coerced numeric voucher chainId into a string.')
+    try:
+        adapter.validate_python(dict(artifact.to_dict(), signature='AA'))
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError('Acceptance adapter accepted a malformed signature segment.')
+print('Installed acceptance: vectors, exact voucher/time binding, trusted key, adapter and blocked Ethereum imports passed.')
+"""
         for candidate in (wheel, rebuilt[0]):
             # Both distributions must supply the whole package in a fresh
             # environment, using its ordinary requirement without extras.
@@ -373,6 +444,7 @@ print('Installed voucher Pydantic adapter: core values, JSON, schema and seriali
                 execute([runtime, "-I", "-m", "pip", "--no-cache-dir", "check"], cwd=root)
                 execute([runtime, "-I", "-B", "-c", code, json.dumps(project)], cwd=root)
                 execute([runtime, "-I", "-B", "-c", invoice_adapter_code], cwd=root)
+                execute([runtime, "-I", "-B", "-c", acceptance_code], cwd=root)
                 execute([runtime, "-I", "-B", "-c", voucher_code + voucher_adapter_code], cwd=root)
 
 

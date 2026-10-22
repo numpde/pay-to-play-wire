@@ -1,0 +1,16 @@
+{
+  "description": "Synthetic acceptance of a complete PayToPlay/2 voucher referring to the native invoice vector. No deployed acceptance or historical signer authority is claimed.",
+  "testPrivateKey": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  "testPublicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+  "cases": [
+    {
+      "name": "native-voucher-acceptance",
+      "payloadUtf8": "{\"voucher\":{\"typedData\":{\"types\":{\"EIP712Domain\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"chainId\",\"type\":\"uint256\"},{\"name\":\"verifyingContract\",\"type\":\"address\"}],\"Voucher\":[{\"name\":\"customer\",\"type\":\"address\"},{\"name\":\"channelId\",\"type\":\"uint256\"},{\"name\":\"cumulativeTotal\",\"type\":\"uint256\"},{\"name\":\"invoiceHash\",\"type\":\"bytes32\"}]},\"primaryType\":\"Voucher\",\"domain\":{\"name\":\"PayToPlay\",\"version\":\"2\",\"chainId\":\"31337\",\"verifyingContract\":\"0x3333333333333333333333333333333333333333\"},\"message\":{\"customer\":\"0x1111111111111111111111111111111111111111\",\"channelId\":\"7\",\"cumulativeTotal\":\"5\",\"invoiceHash\":\"0x6e27a482816c7592f8c08421db21ab5837da7545cdfa54b9904877609fb423c7\"}},\"signature\":\"0x26088fce27e4b5e59bc50b5cd161856f32184a9b3e0eab1f127c9187ce1588a0340e520a1d985a7787aab3c7b04790a568ca9c7cd1cc3ff75194e84480d585061c\"},\"acceptedAt\":2000000000}",
+      "acceptance": {
+        "protected": "eyJhbGciOiJFZDI1NTE5IiwidHlwIjoiYXBwbGljYXRpb24vdm5kLnNpZ25lZC1wdXJjaGFzZS1hY2NlcHRhbmNlLnYxK2pzb24ifQ",
+        "payload": "eyJ2b3VjaGVyIjp7InR5cGVkRGF0YSI6eyJ0eXBlcyI6eyJFSVA3MTJEb21haW4iOlt7Im5hbWUiOiJuYW1lIiwidHlwZSI6InN0cmluZyJ9LHsibmFtZSI6InZlcnNpb24iLCJ0eXBlIjoic3RyaW5nIn0seyJuYW1lIjoiY2hhaW5JZCIsInR5cGUiOiJ1aW50MjU2In0seyJuYW1lIjoidmVyaWZ5aW5nQ29udHJhY3QiLCJ0eXBlIjoiYWRkcmVzcyJ9XSwiVm91Y2hlciI6W3sibmFtZSI6ImN1c3RvbWVyIiwidHlwZSI6ImFkZHJlc3MifSx7Im5hbWUiOiJjaGFubmVsSWQiLCJ0eXBlIjoidWludDI1NiJ9LHsibmFtZSI6ImN1bXVsYXRpdmVUb3RhbCIsInR5cGUiOiJ1aW50MjU2In0seyJuYW1lIjoiaW52b2ljZUhhc2giLCJ0eXBlIjoiYnl0ZXMzMiJ9XX0sInByaW1hcnlUeXBlIjoiVm91Y2hlciIsImRvbWFpbiI6eyJuYW1lIjoiUGF5VG9QbGF5IiwidmVyc2lvbiI6IjIiLCJjaGFpbklkIjoiMzEzMzciLCJ2ZXJpZnlpbmdDb250cmFjdCI6IjB4MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMyJ9LCJtZXNzYWdlIjp7ImN1c3RvbWVyIjoiMHgxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwiY2hhbm5lbElkIjoiNyIsImN1bXVsYXRpdmVUb3RhbCI6IjUiLCJpbnZvaWNlSGFzaCI6IjB4NmUyN2E0ODI4MTZjNzU5MmY4YzA4NDIxZGIyMWFiNTgzN2RhNzU0NWNkZmE1NGI5OTA0ODc3NjA5ZmI0MjNjNyJ9fSwic2lnbmF0dXJlIjoiMHgyNjA4OGZjZTI3ZTRiNWU1OWJjNTBiNWNkMTYxODU2ZjMyMTg0YTliM2UwZWFiMWYxMjdjOTE4N2NlMTU4OGEwMzQwZTUyMGExZDk4NWE3Nzg3YWFiM2M3YjA0NzkwYTU2OGNhOWM3Y2QxY2MzZmY3NTE5NGU4NDQ4MGQ1ODUwNjFjIn0sImFjY2VwdGVkQXQiOjIwMDAwMDAwMDB9",
+        "signature": "FGCzSy0EEDPDlqAJzYU3PUQdfcFWRrsxEono-vLGoig66upHao1h8n6gO2ZnSuyW4dVPX5mRe6RsQlx3XfU6Aw"
+      }
+    }
+  ]
+}

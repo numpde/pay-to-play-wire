@@ -1,16 +1,17 @@
 ---
 layout: default
-title: wire — signed invoices and payment vouchers
+title: wire — invoices, vouchers and signed acceptances
 ---
 
-# Signed invoices and payment vouchers in Python
+# Invoices, vouchers and signed acceptances in Python
 
-`wire` lets applications create, read and verify two kinds of signed messages:
+`wire` lets applications create, read and verify three kinds of signed messages:
 
 | Message | Who signs it | What it contains |
 | --- | --- | --- |
 | Invoice | A service provider | A service description, requested payment and named parties |
 | Voucher | A buyer or an application-authorized signer | A cumulative payment authorization referring to a signed invoice |
+| Acceptance | A receiving service's authorized acceptance signer | The complete signed voucher and the time the service records for its acceptance |
 
 For example, an analysis service could sign an offer to fit a spectrum. A client could verify that offer and sign a voucher containing its exact invoice hash. The receiving service would then check the voucher and decide whether to accept the purchase.
 
@@ -18,9 +19,13 @@ For example, an analysis service could sign an offer to fit a spectrum. A client
 
 A valid signature links a message to a signing key. Your application establishes whose key it is and what that party may authorize. The invoice format uses Ed25519 keys; the voucher format uses Ethereum's secp256k1 signatures to match the payment contract's rules. These key types are not interchangeable.
 
+Acceptance uses Ed25519. It lets a recipient authenticate a service's signed statement about one exact voucher. The producing application owns the decision to accept and the historical authority of the voucher signer. This format defines no later status or fulfillment policy.
+
+The acceptance API below is new in the 0.7.0 candidate. Released 0.6.0, pinned below, contains only invoice and voucher support. To run the complete candidate guide now, use this checkout with the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order against the candidate source. The released installation pin will be updated after publication.
+
 ## Install the complete package
 
-Installing `wire` provides both message types and both Pydantic adapters. There are no extras to select. Python 3.12 or later is required; the maintained installation checks use Python 3.12 on Linux amd64.
+Installing `wire` provides all message types and their Pydantic adapters. There are no extras to select. Python 3.12 or later is required; the maintained installation checks use Python 3.12 on Linux amd64.
 
 The following is a requirements-file entry for [release 0.6.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.6.0):
 
@@ -184,6 +189,42 @@ The **deployment domain** identifies the expected blockchain (`chain_id`) and co
 
 The final equality assertion checks the voucher's invoice reference separately. `verify_voucher` does not check that reference, the amount owed, the customer/signer relationship or whether the channel can pay. An application must check those conditions before accepting a purchase. Transferring or collecting funds, deciding when to run the analysis, and recording its result remain application operations.
 
+## Sign and verify an acceptance
+
+An acceptance contains exactly two payload fields: the **complete signed voucher**, including its original 65-byte signature, and `acceptedAt`, the recorded acceptance time in Unix seconds. `acceptedAt` must be a canonical nonnegative JSON integer in `0..2**53 - 1`; booleans, strings, fractions, exponents and negative zero are rejected. The codec reads no clock and applies no cutoff or ordering policy.
+
+Continue the examples above. This creates a local demonstration statement; it does not make an actual purchase decision or consult a signer registry:
+
+```python
+from wire.acceptance import (
+    SignedAcceptance,
+    encode_acceptance,
+    sign_acceptance,
+    verify_acceptance,
+)
+
+acceptance_key = Ed25519PrivateKey.generate()
+acceptance_bytes = encode_acceptance({
+    "voucher": received_voucher.to_dict(),
+    "acceptedAt": 2000000000,
+})
+acceptance = sign_acceptance(acceptance_bytes, acceptance_key)
+received_acceptance = SignedAcceptance.from_json(acceptance.to_json())
+
+trusted_acceptance_key = acceptance_key.public_key()  # Local demonstration only.
+receipt_document = verify_acceptance(received_acceptance, public_key=trusted_acceptance_key)
+
+assert received_acceptance.voucher == received_voucher
+assert receipt_document["voucher"]["signature"] == received_voucher.signature
+assert received_acceptance.accepted_at == 2000000000
+```
+
+`verify_acceptance` returns the authenticated two-field document. Obtain the expected acceptance verification key from trusted application state, independently of the received message. The receipt carries no signer selector. Its signature covers both fields and the original voucher signature; changing any carried value requires a new receipt signature.
+
+`SignedAcceptance.voucher` returns a structurally validated `SignedVoucher`, and `.accepted_at` returns the integer timestamp. Neither accessor verifies an Ethereum signature or establishes the voucher signer's historical authority. Structural voucher parsing, acceptance verification and the Pydantic adapters do not import Ethereum backends. The complete package installs those dependencies; voucher signing, signature verification and digest computation load them when called.
+
+Acceptance protocol and signature failures raise `AcceptanceError`, a `ValueError`. The raw JSON and key arguments retain explicit `TypeError` contracts. Applications decide whether the verified statement is sufficient for their next operation; this API performs no fulfillment, settlement or later status check.
+
 ## Use the same objects in Pydantic models
 
 Pydantic models validate and serialize application data; OpenAPI describes HTTP API data structures. Both integrations are included with `wire`:
@@ -193,27 +234,32 @@ from pydantic import BaseModel, ConfigDict
 
 from wire.invoice.pydantic import SignedInvoiceValue
 from wire.voucher.pydantic import SignedVoucherValue
+from wire.acceptance.pydantic import SignedAcceptanceValue
 
 
 class PurchaseMessages(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
     invoice: SignedInvoiceValue
     voucher: SignedVoucherValue
+    acceptance: SignedAcceptanceValue
 
 
-messages = PurchaseMessages(invoice=received_invoice.to_dict(), voucher=received_voucher)
+messages = PurchaseMessages(
+    invoice=received_invoice.to_dict(), voucher=received_voucher, acceptance=received_acceptance
+)
 assert type(messages.invoice) is SignedInvoice
 assert type(messages.voucher) is SignedVoucher
+assert type(messages.acceptance) is SignedAcceptance
 assert PurchaseMessages.model_validate_json(messages.model_dump_json()) == messages
 ```
 
-Both fields accept the corresponding core object or its dictionary representation, return a core object and serialize it as the transport object. Their validation enforces the core format and profile rules. Call `verify_invoice` or `verify_voucher` explicitly to check signatures with trusted inputs.
+Each field accepts the corresponding core object or its dictionary representation, returns a core object and serializes it as the transport object. Validation enforces the core format and profile rules. Call the corresponding `verify_invoice`, `verify_voucher` or `verify_acceptance` function explicitly to check its signature with trusted inputs.
 
-**Reject duplicate JSON field names before framework parsing.** A dictionary has already lost that information. For a standalone invoice or voucher, use its `from_json(original_bytes)` method. For a containing HTTP request such as `PurchaseMessages`, the application must reject duplicates in the original request body before passing it to Pydantic or FastAPI. Parsing encoded invoice headers and payloads remains duplicate-aware because those original bytes are still available.
+**Reject duplicate JSON field names before framework parsing.** A dictionary has already lost that information. For a standalone signed message, use its `from_json(original_bytes)` method. For a containing HTTP request such as `PurchaseMessages`, the application must reject duplicates in the original request body before passing it to Pydantic or FastAPI. Parsing encoded JWS headers and payloads remains duplicate-aware because those original bytes are still available.
 
 ## Shared API and message identity
 
-Both `SignedInvoice` and `SignedVoucher` are immutable objects with these methods:
+`SignedInvoice`, `SignedVoucher` and `SignedAcceptance` are immutable objects with these methods:
 
 | Method | Result |
 | --- | --- |
@@ -224,6 +270,12 @@ Both `SignedInvoice` and `SignedVoucher` are immutable objects with these method
 | `json_schema()` | Return a fresh JSON Schema description without invoking Pydantic |
 
 JSON Schema describes field structure and text constraints. Core parsing additionally checks decoded invoice contents, uint256 range and voucher signature form. Neither a schema nor a parsed object establishes a valid signature or permission to purchase.
+
+### Acceptance identity: retain the original JWS
+
+Acceptance uses the same three-string flattened JWS transport and canonical unpadded base64url as invoices. Its protected header is `{"alg":"Ed25519","typ":"application/vnd.signed-purchase-acceptance.v1+json"}`, with the same media-type comparison rules described below. The signature covers ASCII(`protected + "." + payload`). Invoice and acceptance profiles cannot substitute for one another, even under the same key.
+
+Retain and forward the original acceptance segments. `acceptance.compact`, `.payload_bytes`, `.document`, `.signing_input` and `from_compact` have the same preservation contracts as their invoice counterparts. This profile defines no additional acceptance hash, UUID, signer field or duplicated invoice-hash field. The invoice reference remains inside the complete carried voucher.
 
 ### Invoice identity: preserve the three signed strings
 
@@ -260,23 +312,25 @@ The transported object contains exactly `typedData` and `signature`. Python buil
 | Decoded invoice document | At most 16384 UTF-8 bytes; nested container depth at most 16, counting the root as 1 |
 | Invoice signature text | Exactly 86 canonical unpadded base64url characters encoding 64 bytes |
 | Voucher transport JSON | At most 8192 bytes, with the fixed typed-data schema and signature form |
+| Acceptance transport JSON / compact form | At most 32768 bytes / 22276 characters, with a decoded payload at most 16384 bytes and the same 256-byte header and 64-byte Ed25519 signature bounds |
 
 The raw parsers reject duplicate field names and malformed UTF-8/JSON. Invoice JSON also rejects byte-order marks, nonfinite numbers and unpaired Unicode surrogates. The invoice document's depth and number rules apply to all allowed `service` values. Applications receiving HTTP requests must limit body size before parsing, including when the signed message is nested inside a larger request.
 
-Core diagnostics identify the failed rule without echoing the document. Invoice protocol failures, including incorrect field types in message dictionaries, use `InvoiceError`; voucher protocol failures use `ValueError`. Explicitly typed API arguments, such as byte inputs, key objects and deployment-domain objects, use `TypeError` when their type contracts are violated. Backend failures propagate except for the deliberately translated verification errors. Pydantic reports format failures as `ValidationError` through its own interface.
+Core diagnostics identify the failed rule without echoing the document. Invoice protocol failures, including incorrect field types in message dictionaries, use `InvoiceError`; acceptance failures use `AcceptanceError`; voucher protocol failures use `ValueError`. Explicitly typed API arguments, such as byte inputs, key objects and deployment-domain objects, use `TypeError` when their type contracts are violated. Backend failures propagate except for the deliberately translated verification errors. Pydantic reports format failures as `ValidationError` through its own interface.
 
 ## Reproducibility and verification evidence
 
 The 0.6.0 release was built from committed source `be80276d38f80a2bade5df359c77797107672207`. Lint, 114 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. Downloaded draft assets and qualification logs matched the checked bytes before public release. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.6.0) contains the source distribution, source inventory, hash manifest and logs.
 
-Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations:
+Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The acceptance vector in this candidate example is new in 0.7.0 and was not part of the preceding 0.6.0 qualification:
 
 ```python
 from importlib.resources import files
 
 invoice_vectors = files("wire").joinpath("vectors/invoice.json").read_bytes()
 voucher_vectors = files("wire").joinpath("vectors/voucher.json").read_bytes()
-assert invoice_vectors and voucher_vectors
+acceptance_vectors = files("wire").joinpath("vectors/acceptance.json").read_bytes()
+assert invoice_vectors and voucher_vectors and acceptance_vectors
 ```
 
 The tests cover independent Python JWS verification, fixed voucher digest expectations and an invoice-to-voucher example. Additional recorded JavaScript comparisons checked invoice signatures with `jose` and voucher signatures with viem. These observations establish the particular interoperability checks recorded in the [consolidation record](https://github.com/numpde/pay-to-play-wire/blob/main/notes/010_wire_consolidation.txt); they establish no consumer deployment or live payment outcome.
