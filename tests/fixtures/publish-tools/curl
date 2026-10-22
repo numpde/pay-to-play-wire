@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
-# These publication boundary checks stop before any HTTP request.
+# The Pages fixture supplies static HTTP bytes without contacting a network.
+set -euo pipefail
+if [[ $PUBLISH_TEST_MODE == pages-first ]]; then
+    printf 'curl %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
+    while [[ $# -gt 0 ]]; do
+        if [[ $1 == --output ]]; then
+            printf '<meta name="source-revision" content="%040d">\n' 1 > "$2"
+            printf '200'
+            exit
+        fi
+        shift
+    done
+fi
 printf 'Unexpected HTTP request in offline publication test.\n' >&2
 exit 97

@@ -4,6 +4,30 @@ printf 'gh %s\n' "$*" >> "$PUBLISH_TEST_TRACE"
 case "$1 $2" in
     'repo view') printf 'numpde/pay-to-play-wire\n' ;;
     'api --hostname')
+        if [[ $PUBLISH_TEST_MODE == pages-first || $PUBLISH_TEST_MODE == pages-error ]]; then
+            case "$*" in
+                *'/pages/builds/latest'*)
+                    if [[ $PUBLISH_TEST_MODE == pages-error ]]; then
+                        printf 'HTTP/2.0 500 Internal Server Error\r\n\r\n{"message":"Server Error"}\n'
+                        exit 1
+                    fi
+                    if [[ ! -e "$PUBLISH_TEST_TRACE.latest-seen" ]]; then
+                        printf 'first build pending\n' > "$PUBLISH_TEST_TRACE.latest-seen"
+                        printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
+                        exit 1
+                    fi
+                    if [[ " $* " == *' --include '* ]]; then
+                        printf 'HTTP/2.0 200 OK\r\n\r\n{"status":"built"}\n'
+                    else printf '%040d built\n' 1; fi ;;
+                *'--method POST'*'/pages '*) printf '{"source":{"branch":"main","path":"/docs"}}\n' ;;
+                *'--include '*'/pages')
+                    printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
+                    exit 1 ;;
+                *'/pages --jq .html_url') printf 'https://numpde.github.io/pay-to-play-wire/\n' ;;
+                *) exit 97 ;;
+            esac
+            exit
+        fi
         if [[ $PUBLISH_TEST_MODE == unknown || $PUBLISH_TEST_MODE == publish || $PUBLISH_TEST_MODE == corrupt-source ]]; then
             printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
             exit 1

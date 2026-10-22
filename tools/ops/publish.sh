@@ -161,9 +161,15 @@ else
     [[ "$page_url" == https://* ]] || fail 'Cannot verify Pages: GitHub did not return an HTTPS site URL.'
     readonly deadline=$((SECONDS + 600))
     while (( SECONDS < deadline )); do
-        native 'Pages build inspection' 30 gh api --hostname github.com "repos/$repository/pages/builds/latest" \
-            --jq '.commit + " " + .status' > "$scratch/pages-status"
-        read -r built_commit status < "$scratch/pages-status"
+        # A newly configured site has no latest build until GitHub creates it.
+        if resource_exists "repos/$repository/pages/builds/latest" "$scratch/latest-pages-build"; then
+            native 'Pages build inspection' 30 gh api --hostname github.com "repos/$repository/pages/builds/latest" \
+                --jq '.commit + " " + .status' > "$scratch/pages-status"
+            read -r built_commit status < "$scratch/pages-status"
+        else
+            built_commit=
+            status=pending
+        fi
         # latest can still describe a previous failed build while a newly
         # requested build is queued, so its failure cannot decide this outcome.
         if [[ "$built_commit" == "$commit" && "$status" == built ]]; then

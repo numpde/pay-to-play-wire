@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $PUBLISH_TEST_MODE == pages-first && $# == 1 && $1 == 5 ]]; then
+    printf 'sleep 5\n' >> "$PUBLISH_TEST_TRACE"
+    exit
+fi
+exec /bin/sleep "$@"

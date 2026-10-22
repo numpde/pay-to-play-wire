@@ -26,9 +26,9 @@ class PublicationTests(unittest.TestCase):
         # remains noexec; private fixture state is written only under self.root.
         self.bin = Path("tests/fixtures/publish-tools").resolve()
 
-    def run_publisher(self, scenario):
+    def run_publisher(self, scenario, action="publish/release"):
         return subprocess.run(
-            ["bash", str(self.root / "tools/ops/publish.sh"), "publish/release"],
+            ["bash", str(self.root / "tools/ops/publish.sh"), action],
             cwd=self.root,
             env={
                 "PATH": str(self.bin) + os.pathsep + os.defpath,
@@ -132,3 +132,23 @@ class PublicationTests(unittest.TestCase):
         self.assertIn("gh release download", calls)
         self.assertNotIn("gh release edit", calls)
         self.assertEqual(1, len(list((self.root / ".work").glob("publication.*"))))
+
+    def test_first_pages_build_can_be_absent_before_matching_live_revision(self):
+        result = self.run_publisher("pages-first", "publish/pages")
+        self.assertEqual(0, result.returncode, msg=result.stderr)
+        self.assertIn("( pending)", result.stdout)
+        self.assertIn("Published https://numpde.github.io/pay-to-play-wire/ from " + "0" * 39 + "1", result.stdout)
+        calls = self.trace.read_text()
+        self.assertEqual(1, calls.count("--method POST"))
+        self.assertIn("sleep 5", calls)
+        self.assertIn("curl ", calls)
+
+    def test_pages_build_server_failure_is_fatal_without_polling_or_live_fetch(self):
+        result = self.run_publisher("pages-error", "publish/pages")
+        self.assertEqual(2, result.returncode, msg=result.stderr)
+        self.assertIn("Cannot inspect GitHub resource repos/numpde/pay-to-play-wire/pages/builds/latest", result.stderr)
+        calls = self.trace.read_text()
+        self.assertEqual(1, calls.count("repos/numpde/pay-to-play-wire/pages/builds/latest"))
+        self.assertEqual(1, calls.count("--method POST"))
+        self.assertNotIn("sleep 5", calls)
+        self.assertNotIn("curl ", calls)

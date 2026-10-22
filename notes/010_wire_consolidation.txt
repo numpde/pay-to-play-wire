@@ -187,3 +187,20 @@ released-baseline.json SHA-256
 released-cross-language.json
 54be977b90e740ef976b8d2e0a6fcd2275521b1a3374fb0be0cb03601f3a31a5.
 These checks establish no consumer cutover, deployment or chain settlement.
+
+Pages first-publication correction
+
+The first maintained Pages target successfully configured main/docs, then GitHub
+returned 404 for the latest-build endpoint before creating the first build record.
+The target stopped rather than claiming publication. Receipts retained under
+.work/publication.BLApWgmD show both the successful configuration and absent
+record. A subsequent read confirmed the site existed and was building; no
+uncertain configuration write was retried.
+
+The publisher now uses its established HTTP absence classifier while polling
+the latest Pages build. A confirmed 404 is pending; other API/transport failures
+remain fatal. It still requires the exact source revision in both the build
+record and live HTTPS page. Two focused workflow scenarios cover first-record
+absence followed by successful verified publication, and a server failure that
+stops without polling or live fetch. The updated repository campaign has 52
+passing checks, with lint unchanged; no package or published asset was altered.
