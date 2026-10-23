@@ -31,4 +31,12 @@ This is a core-only release. It adds no CLI, standalone bundle, JavaScript modul
 
 The implementation extends the shared reader and serializer at revision `e1398263ed5f9b4d415d4c9c4a28490b297a3774`; it introduces no separate JSON parser or canonicalizer. Malformed input, duplicate names, invalid Unicode, depth/size violations and precision-changing conversions raise `CanonicalJSONError`, a `ValueError`. Incorrect byte argument types raise `TypeError`.
 
-Shared cases in `wire/vectors/json.json` distinguish ordinary-input normalization from strict byte admission. They include equivalent number forms, duplicate rejection, rounding loss and underflow. Source tests additionally exercise decimal-context independence and larger explicit input limits. Installed checks exercise those shared cases against both the wheel and a wheel rebuilt from the source distribution. Frozen release results are recorded after qualification.
+Shared cases in `wire/vectors/json.json` distinguish ordinary-input normalization from strict byte admission. They include equivalent number forms, duplicate rejection, rounding loss and underflow. Source tests additionally exercise decimal-context independence and larger explicit input/output limits. Installed checks exercise those shared cases against both the wheel and a wheel rebuilt from the source distribution.
+
+Published from committed source `2e5c476f80991ebc1961368c1c6caae46f203360`. Lint and all 148 tests passed: 53 repository, 11 canonical JSON, 44 invoice, 18 voucher and 22 acceptance tests. Both fresh installed environments passed the ordinary-input and existing protocol checks. Downloaded draft artifacts and logs matched before publication; an anonymous public-wheel download also matched.
+
+The release includes the [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.10.0/release-build.log), [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.10.0/release-test.log), [source inventory](https://github.com/numpde/pay-to-play-wire/releases/download/v0.10.0/source.json) and [artifact hashes](https://github.com/numpde/pay-to-play-wire/releases/download/v0.10.0/sha256.json). These establish package qualification, not consumer adoption or deployment.
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.10.0/wire-0.10.0-py3-none-any.whl#sha256=a65715d657c47d8a4c38d511f503a3f896b4a2c3497c2a54b8523ac5e131679d
+```

@@ -98,7 +98,7 @@ If either publisher fails, it reports retained inputs, logs and API receipts und
 
 Release 0.9.0 adds `from wire import CanonicalJSON` for unsigned JCS encoding and strict admission of already-canonical bytes. `.encode(value)` constructs an immutable value; `.from_bytes(raw)` rejects alternate spellings and preserves the supplied bytes. `.bytes` and `bytes(value)` expose those bytes; `.value` returns a fresh JSON projection. This establishes encoding only, without schema, signature or trust claims. Existing invoice, voucher and acceptance profiles remain unchanged. See [the canonical JSON release record](notes/019_release_v0.9.0.md) for the numeric contract and limits. `make test/json` runs its dedicated checks.
 
-The 0.10.0 candidate adds `.encode_json(raw)` to canonicalize ordinary JSON without first passing through a potentially lossy caller parser. It accepts formatting differences and equivalent decimal number spellings, while rejecting duplicate names and precision-changing conversions. `.from_bytes` keeps its separate strict-admission contract. See [the ordinary-input release record](notes/020_release_v0.10.0.md). No CLI, standalone bundle or JavaScript asset is included.
+Release 0.10.0 adds `.encode_json(raw)` to canonicalize ordinary JSON without first passing through a potentially lossy caller parser. It accepts formatting differences and equivalent decimal number spellings, while rejecting duplicate names and precision-changing conversions. `.from_bytes` keeps its separate strict-admission contract. See [the ordinary-input release record](notes/020_release_v0.10.0.md). No CLI, standalone bundle or JavaScript asset is included.
 
 ## Source and historical evidence
 
