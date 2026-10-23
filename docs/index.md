@@ -21,27 +21,27 @@ A valid signature links a message to a signing key. Your application establishes
 
 Acceptance uses Ed25519. It lets a recipient authenticate a service's signed statement about one exact voucher. The producing application owns the decision to accept and the historical authority of the voucher signer. This format defines no later status or fulfillment policy.
 
-The acceptance v2 examples below use release 0.8.0, pinned below. Version 0.7.0 supports the earlier acceptance profile without `signer`; its artifacts require that older version. To exercise this guide from the repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
+The examples below use release 0.9.0, pinned below. Its signed-message profiles are unchanged from 0.8.0. Version 0.7.0 supports the earlier acceptance profile without `signer`; its artifacts require that older version. To exercise this guide from the repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
 
 ## Install the complete package
 
 Installing `wire` provides all message types and their Pydantic adapters. There are no extras to select. Python 3.12 or later is required; the maintained installation checks use Python 3.12 on Linux amd64.
 
-The following is a requirements-file entry for [release 0.8.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.8.0):
+The following is a requirements-file entry for [release 0.9.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.9.0):
 
 ```text
-wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/wire-0.8.0-py3-none-any.whl#sha256=829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/wire-0.9.0-py3-none-any.whl#sha256=4a306070e06fe55b04583ab908dfb8d1392893da5c8c0e067b2f01a907ca047c
 ```
 
-Acquire the wheel and its dependencies through your application's dependency workflow, then verify the downloaded bytes before installing offline. The [runtime lock for this release](https://github.com/numpde/pay-to-play-wire/blob/55b003102415ca20af2f288080a7d2fea7ecea50/requirements/runtime.lock) lists the exact dependency versions and wheel hashes used for the maintained platform. A wheel file alone does not contain those dependencies. Repository contributors can reuse `.work/wire/wheels/` after `make dependencies/check`; that development dependency directory also contains the runtime wheels. Application users can supply their own verified dependency directory without preparing the development image.
+Acquire the wheel and its dependencies through your application's dependency workflow, then verify the downloaded bytes before installing offline. The [runtime lock for this release](https://github.com/numpde/pay-to-play-wire/blob/3de987104e703fd414488a25105f5a416791bfd5/requirements/runtime.lock) lists the exact dependency versions and wheel hashes used for the maintained platform. A wheel file alone does not contain those dependencies. Repository contributors can reuse `.work/wire/wheels/` after `make dependencies/check`; that development dependency directory also contains the runtime wheels. Application users can supply their own verified dependency directory without preparing the development image.
 
 For example, download the package wheel with an explicitly selected network interface. Replace `eth0` with an interface available on your machine:
 
 ```sh
 curl --interface eth0 --fail --location \
-  --output wire-0.8.0-py3-none-any.whl \
-  https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/wire-0.8.0-py3-none-any.whl
-printf '%s\n' '829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae  wire-0.8.0-py3-none-any.whl' | sha256sum --check
+  --output wire-0.9.0-py3-none-any.whl \
+  https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/wire-0.9.0-py3-none-any.whl
+printf '%s\n' '4a306070e06fe55b04583ab908dfb8d1392893da5c8c0e067b2f01a907ca047c  wire-0.9.0-py3-none-any.whl' | sha256sum --check
 ```
 
 Once the wheel, runtime lock and dependency wheels have been acquired and verified, install inside your application's Python environment. Replace the three absolute paths below with their local locations. `--no-index` prevents this step from downloading dependencies:
@@ -50,7 +50,7 @@ Once the wheel, runtime lock and dependency wheels have been acquired and verifi
 python -m pip install --no-index --require-hashes \
   --find-links=/absolute/path/to/verified-dependency-wheels \
   -r /absolute/path/to/runtime.lock \
-  'wire @ file:///absolute/path/to/wire-0.8.0-py3-none-any.whl#sha256=829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae'
+  'wire @ file:///absolute/path/to/wire-0.9.0-py3-none-any.whl#sha256=4a306070e06fe55b04583ab908dfb8d1392893da5c8c0e067b2f01a907ca047c'
 ```
 
 For work in this repository, run project Python through Make and its maintained containers; see the README rather than installing into the host Python environment.
@@ -263,7 +263,7 @@ Each field accepts the corresponding core object or its dictionary representatio
 
 ## Encode or admit canonical JSON
 
-The 0.9.0 candidate adds a separate `CanonicalJSON` value. It does not change the signed profiles or the invoice `JsonNumber` behavior described above. The 0.8.0 installation pin does not include this new API; it will be updated after qualification and publication.
+Release 0.9.0 adds a separate `CanonicalJSON` value. It does not change the signed profiles or the invoice `JsonNumber` behavior described above.
 
 ```python
 from wire import CanonicalJSON
@@ -346,7 +346,7 @@ Core diagnostics identify the failed rule without echoing the document. Invoice 
 
 ## Reproducibility and verification evidence
 
-Release 0.8.0 was built from committed source `55b003102415ca20af2f288080a7d2fea7ecea50`. Lint, 137 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers independent JWS interoperability, exact vector reproduction, carried-signer and trusted-key binding, altered signer/voucher/time rejection, v1 rejection and acceptance use while Ethereum imports are blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.8.0) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
+Release 0.9.0 was built from committed source `3de987104e703fd414488a25105f5a416791bfd5`. Lint, 146 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers canonical JSON encoding and strict byte admission, independent JWS interoperability, exact vector reproduction, carried-signer and trusted-key binding, altered signer/voucher/time rejection, acceptance v1 rejection and acceptance use while Ethereum imports are blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.9.0) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
 
 Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The acceptance vector uses the v2 profile introduced in 0.8.0:
 
@@ -356,7 +356,8 @@ from importlib.resources import files
 invoice_vectors = files("wire").joinpath("vectors/invoice.json").read_bytes()
 voucher_vectors = files("wire").joinpath("vectors/voucher.json").read_bytes()
 acceptance_vectors = files("wire").joinpath("vectors/acceptance.json").read_bytes()
-assert invoice_vectors and voucher_vectors and acceptance_vectors
+json_vectors = files("wire").joinpath("vectors/json.json").read_bytes()
+assert invoice_vectors and voucher_vectors and acceptance_vectors and json_vectors
 ```
 
 The tests cover independent Python JWS verification, fixed voucher digest expectations and an invoice-to-voucher example. Additional recorded JavaScript comparisons checked invoice signatures with `jose` and voucher signatures with viem. These observations establish the particular interoperability checks recorded in the [consolidation record](https://github.com/numpde/pay-to-play-wire/blob/main/notes/010_wire_consolidation.txt); they establish no consumer deployment or live payment outcome.

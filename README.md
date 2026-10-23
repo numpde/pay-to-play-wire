@@ -96,7 +96,7 @@ If either publisher fails, it reports retained inputs, logs and API receipts und
 
 ## Canonical JSON
 
-The 0.9.0 candidate adds `from wire import CanonicalJSON` for unsigned JCS encoding and strict admission of already-canonical bytes. `.encode(value)` constructs an immutable value; `.from_bytes(raw)` rejects alternate spellings and preserves the supplied bytes. `.bytes` and `bytes(value)` expose those bytes; `.value` returns a fresh JSON projection. This establishes encoding only, without schema, signature or trust claims. Existing invoice, voucher and acceptance profiles remain unchanged. See [the canonical JSON release record](notes/019_release_v0.9.0.md) for the numeric contract and limits. `make test/json` runs its dedicated checks.
+Release 0.9.0 adds `from wire import CanonicalJSON` for unsigned JCS encoding and strict admission of already-canonical bytes. `.encode(value)` constructs an immutable value; `.from_bytes(raw)` rejects alternate spellings and preserves the supplied bytes. `.bytes` and `bytes(value)` expose those bytes; `.value` returns a fresh JSON projection. This establishes encoding only, without schema, signature or trust claims. Existing invoice, voucher and acceptance profiles remain unchanged. See [the canonical JSON release record](notes/019_release_v0.9.0.md) for the numeric contract and limits. `make test/json` runs its dedicated checks.
 
 ## Source and historical evidence
 

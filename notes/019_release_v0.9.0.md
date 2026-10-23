@@ -34,4 +34,14 @@ The serializer is the established no-dependency `rfc8785==0.1.4` implementation,
 
 Strict reading reuses the duplicate-aware bounded JSON owner from revision `707722ee1ad28d934ad553ba5a0a3f35021d9d8b`. The new layer adds canonical byte comparison, the explicit binary64 projection, I-JSON noncharacter rejection, immutable ownership and encoding resource bounds. Serialization rules are defined by [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785.html); exact-number guidance follows [RFC 7493 section 2.2](https://www.rfc-editor.org/rfc/rfc7493.html#section-2.2).
 
-Shared interoperability cases are installed at `wire/vectors/json.json`. They cover canonical key ordering, number rendering, negative zero, large integral binary64 output, Unicode preservation and rejected alternative encodings. Source tests also exercise duplicate names, malformed UTF-8, nonfinite numbers, depth/size boundaries, cyclic and hostile inputs, fresh projections and explicit larger HTTP-body limits. Installed-package checks run against both distribution forms; final release results are recorded after frozen-source qualification.
+Shared interoperability cases are installed at `wire/vectors/json.json`, SHA256 `227a0d80f3660dba749fa1f9f3470fd50957335abc295a1249ec912323498746`. They cover canonical key ordering, number rendering, negative zero, large integral binary64 output, Unicode preservation and rejected alternative encodings. Source tests also exercise duplicate names, malformed UTF-8, nonfinite numbers, depth/size boundaries, cyclic and hostile inputs, fresh projections and explicit larger HTTP-body limits.
+
+Published from committed source `3de987104e703fd414488a25105f5a416791bfd5`. Lint and all 146 tests passed: 53 repository, nine canonical JSON, 44 invoice, 18 voucher and 22 acceptance tests. Both fresh installed environments—the wheel and a wheel rebuilt from the source distribution—passed the new API's origin, vector, binary64 and strict byte-admission checks alongside the unchanged protocol checks.
+
+The release includes the [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/release-build.log), [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/release-test.log), [source inventory](https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/source.json) and [artifact hashes](https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/sha256.json). Downloaded draft assets and logs matched the qualified files before publication; an anonymous public-wheel download also matched. These checks establish package behavior, not application adoption, endpoint migration or deployment.
+
+Use this requirements-file entry with the release's [runtime dependency lock](https://github.com/numpde/pay-to-play-wire/blob/3de987104e703fd414488a25105f5a416791bfd5/requirements/runtime.lock) and your dependency verification workflow:
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.9.0/wire-0.9.0-py3-none-any.whl#sha256=4a306070e06fe55b04583ab908dfb8d1392893da5c8c0e067b2f01a907ca047c
+```
