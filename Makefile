@@ -9,7 +9,7 @@ override export PUBLISH_TAG_INPUT := $(if $(filter command line,$(origin TAG)),$
 
 .PHONY: help prerequisites/check dependencies/download dependencies/check build/image build/verify package/build publish/release publish/pages test test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/voucher test/package lint/check
 
-.PHONY: vectors/show test/acceptance
+.PHONY: vectors/show test/acceptance test/json
 
 help:
 	@printf '%s\n' \
@@ -30,12 +30,13 @@ help:
 	  'test/invoice/integration Check JWS interoperability and the Pydantic adapter.' \
 	  'test/voucher             Check voucher construction, signing and rejection.' \
 	  'test/acceptance          Check signed acceptance binding, parsing and verification.' \
+	  'test/json                Check canonical JSON encoding and strict byte admission.' \
 	  'test/package             Check installed wheel/sdist artifacts without source mounts.' \
 	  'lint/check               Check Python lint and formatting without writing.'
 
-test: lint/check test/repository test/invoice test/voucher test/acceptance test/package
+test: lint/check test/repository test/json test/invoice test/voucher test/acceptance test/package
 
-test/repository test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/voucher test/acceptance test/package lint/check prerequisites/check build/verify package/build vectors/show:
+test/repository test/json test/invoice test/invoice/normative test/invoice/adversarial test/invoice/integration test/voucher test/acceptance test/package lint/check prerequisites/check build/verify package/build vectors/show:
 	bash tools/ops/wire.sh $@
 
 dependencies/download:

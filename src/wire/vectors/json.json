@@ -1,0 +1,14 @@
+{
+  "description": "JCS encoding and strict canonical-byte admission. Numeric values use binary64 semantics; these cases establish no product schema or trust.",
+  "cases": [
+    {"value": {"z": 2, "a": 1}, "canonicalUtf8": "{\"a\":1,\"z\":2}"},
+    {"value": [333333333.33333329, 1e30, 4.50, 2e-3, 1e-27], "canonicalUtf8": "[333333333.3333333,1e+30,4.5,0.002,1e-27]"},
+    {"value": 1e20, "canonicalUtf8": "100000000000000000000"},
+    {"value": 5e-324, "canonicalUtf8": "5e-324"},
+    {"value": -0.0, "canonicalUtf8": "0"},
+    {"value": "é", "canonicalUtf8": "\"é\""},
+    {"value": "é", "canonicalUtf8": "\"é\""},
+    {"value": [null, true, false, "\n"], "canonicalUtf8": "[null,true,false,\"\\n\"]"}
+  ],
+  "rejectedUtf8": [" {\"a\":1}", "{\"z\":2,\"a\":1}", "{\"a\":1,\"a\":2}", "1.0", "-0", "9007199254740993", "1e9999"]
+}

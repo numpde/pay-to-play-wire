@@ -1,4 +1,6 @@
 # CPython 3.12 linux/amd64 wheels, also used by Agent Mail's runtime lock.
+rfc8785==0.1.4 \
+    --hash=sha256:520d690b448ecf0703691c76e1a34a24ddcd4fc5bc41d589cb7c58ec651bcd48
 cryptography==50.0.2 \
     --hash=sha256:9dab55f57c74c3cad24c323bacbbd04be4705ba6eb0d92e920b1fc4837ed5079
 cffi==2.1.1 \

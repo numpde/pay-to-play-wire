@@ -19,6 +19,10 @@ Signing requires equality with the private key's public key; verification requir
 equality with the caller-supplied trusted key. Carry identity on wire rather than
 requiring a separate saved key or database lookup; trust remains application-owned.
 No opaque signer selector or acceptance hash. Reject the old acceptance profile.
+CanonicalJSON owns canonical UTF-8 JCS bytes and strict raw-byte admission only;
+it proves no schema, signature, key trust or purchase outcome. Its binary64
+number contract does not replace existing invoice JsonNumber semantics. Keep
+existing signed profiles unchanged until an explicit profile migration.
 Structural voucher parsing must not import Ethereum backends. Applications own
 historical voucher-signer authority, fulfillment and all later status policy.
 
@@ -47,6 +51,7 @@ campaigns, tests/repository for actual workflow policy and tests/helpers for
 reusable setup. Add categories only when populated. Shared interoperability
 vectors are package data under src/wire/vectors so installed consumers
 can read the same authoritative files without copying fixtures.
+tests/json holds canonical-encoding and raw-admission proofs.
 
 Write design and working notes as .txt files under notes/.
 

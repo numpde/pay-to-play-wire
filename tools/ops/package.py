@@ -186,6 +186,7 @@ import json
 import sys
 from pathlib import Path
 import wire
+import wire.json as wire_json
 import wire.invoice as invoice
 from wire.invoice import InvoiceError, JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -197,11 +198,30 @@ assert distribution.requires == project['dependencies']
 assert distribution.metadata.get_all('Provides-Extra') is None, 'wire must provide all capabilities without extras.'
 assert distribution.metadata['Requires-Python'] == project['requires-python']
 assert Path(wire.__file__).resolve().is_relative_to(Path(sys.prefix))
+assert Path(wire_json.__file__).resolve().is_relative_to(Path(sys.prefix))
 assert Path(invoice.__file__).resolve().is_relative_to(Path(sys.prefix))
 for development_module in ('tools', 'tests', 'signed_invoice', 'signed_voucher'):
     assert importlib.util.find_spec(development_module) is None, f"Installed runtime can import development module {development_module!r}."
 assert 'eth_account' not in sys.modules, 'Invoice imports eagerly loaded Ethereum support.'
 assert 'pydantic' not in sys.modules, 'Invoice imports eagerly loaded the Pydantic adapter.'
+canonical_vectors = json.loads(importlib.resources.files('wire').joinpath('vectors/json.json').read_bytes())
+for case in canonical_vectors['cases']:
+    canonical_bytes = case['canonicalUtf8'].encode('utf-8')
+    encoded = wire.CanonicalJSON.encode(case['value'])
+    assert encoded.bytes == canonical_bytes
+    admitted = wire.CanonicalJSON.from_bytes(canonical_bytes)
+    assert bytes(admitted) == canonical_bytes
+    assert encoded == admitted
+    assert wire.CanonicalJSON.encode(admitted.value) == admitted
+for raw in canonical_vectors['rejectedUtf8']:
+    try:
+        wire.CanonicalJSON.from_bytes(raw.encode('utf-8'))
+    except wire.CanonicalJSONError:
+        pass
+    else:
+        raise AssertionError('Installed canonical JSON admitted an alternative encoding.')
+assert type(wire.CanonicalJSON.from_bytes(b'100000000000000000000').value) is float
+print('Installed canonical JSON: origin, shared vectors, binary64 and strict byte admission passed.')
 vectors = json.loads(importlib.resources.files('wire').joinpath('vectors/invoice.json').read_bytes())
 json.loads(importlib.resources.files('wire').joinpath('vectors/voucher.json').read_bytes())
 for obsolete in ('validate_payment_route', 'require_merchant_id', 'require_identifier',

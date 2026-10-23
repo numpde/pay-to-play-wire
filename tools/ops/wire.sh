@@ -8,7 +8,7 @@ print_command=false
 if [[ $# -gt 0 && "$1" == --print ]]; then print_command=true; shift; fi
 if [[ $# != 1 ]]; then printf '%s\n' 'Usage: bash tools/ops/wire.sh [--print] ACTION; see make help.' >&2; exit 2; fi
 case "$1" in
-    download|check|build|prerequisites/check|build/verify|package/build|test/package|test/repository|test/invoice|test/invoice/normative|test/invoice/adversarial|test/invoice/integration|test/voucher|test/acceptance|lint/check|vectors/show) ;;
+    download|check|build|prerequisites/check|build/verify|package/build|test/package|test/repository|test/json|test/invoice|test/invoice/normative|test/invoice/adversarial|test/invoice/integration|test/voucher|test/acceptance|lint/check|vectors/show) ;;
     *) printf '%s\n' 'Cannot run library workflow: unknown action; see make help.' >&2; exit 2 ;;
 esac
 readonly action=$1
@@ -43,7 +43,7 @@ for path in "${inputs[@]}" tools/ops/docker_client.sh tools/ops/inference_native
 source_directories=(src tests tools containers requirements docs)
 if [[ "$action" == test/repository ]]; then source_directories+=(notes); fi
 case "$action" in
-    package/build|test/repository|test/invoice|test/invoice/*|test/voucher|test/acceptance|build/verify|lint/check|vectors/show)
+    package/build|test/repository|test/json|test/invoice|test/invoice/*|test/voucher|test/acceptance|build/verify|lint/check|vectors/show)
         for path in "${source_directories[@]}"; do
             require_directory "$path"
             if [[ -n $(find "$path" -type l -print -quit) ]]; then printf 'Cannot mount symlinked source below %s.\n' "$path" >&2; exit 2; fi
@@ -280,6 +280,7 @@ case "$action" in
             lint/check) command=(bash -eu -c 'python3 -m ruff check --no-cache --config ruff.toml src tests tools && python3 -m ruff format --no-cache --diff --config ruff.toml src tests tools') ;;
             build/verify) command=(python3 -B -m unittest discover -s tests/repository -p test_runtime.py -v) ;;
             test/repository) command=(python3 -B -m unittest discover -s tests/repository -v) ;;
+            test/json) command=(python3 -B -m unittest discover -s tests/json -v) ;;
             test/invoice) command=(python3 -B -m unittest discover -s tests/invoice -v) ;;
             test/invoice/*) command=(python3 -B -m unittest discover -s "tests/invoice/${action##*/}" -v) ;;
             test/voucher) command=(python3 -B -m unittest discover -s tests/voucher -v) ;;

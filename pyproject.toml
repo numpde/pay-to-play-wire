@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wire"
-version = "0.8.0"
+version = "0.9.0"
 description = "PayToPlay signed invoices, vouchers and purchase acceptances"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["cryptography==50.0.2", "pydantic==2.13.4", "eth-account==0.14.0", "eth-keys==0.8.0", "eth-utils==6.0.0"]
+dependencies = ["cryptography==50.0.2", "pydantic==2.13.4", "eth-account==0.14.0", "eth-keys==0.8.0", "eth-utils==6.0.0", "rfc8785==0.1.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

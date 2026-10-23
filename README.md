@@ -43,11 +43,12 @@ make test
 
 `package/build` writes one wheel, one source distribution, `source.json` and `sha256.json` into `.work/dist/`. That directory must be empty before a build. Retain or move earlier output explicitly before rebuilding.
 
-`make test` runs lint, repository checks, invoice, voucher and acceptance tests, and installed-package checks. It consumes the previously built artifacts. Focused commands are:
+`make test` runs lint, repository checks, canonical JSON, invoice, voucher and acceptance tests, and installed-package checks. It consumes the previously built artifacts. Focused commands are:
 
 ```sh
 make lint/check
 make test/repository
+make test/json
 make test/invoice/normative
 make test/invoice/adversarial
 make test/invoice/integration
@@ -92,6 +93,10 @@ make publish/pages
 This pushes `HEAD`, configures Pages for `main/docs` and waits for the live HTTPS page to report that exact source revision. A changed source or configuration triggers a build; an unchanged publication requests a rebuild. The wait has a ten-minute deadline, and individual API requests have shorter deadlines. A queued build or request timeout does not establish that the new guide is live.
 
 If either publisher fails, it reports retained inputs, logs and API receipts under `.work/publication.*`. Inspect those records and confirm process/container cleanup before retrying. Some external steps may already have completed; failure is not permission to overwrite an existing release or discard uncertain state.
+
+## Canonical JSON
+
+The 0.9.0 candidate adds `from wire import CanonicalJSON` for unsigned JCS encoding and strict admission of already-canonical bytes. `.encode(value)` constructs an immutable value; `.from_bytes(raw)` rejects alternate spellings and preserves the supplied bytes. `.bytes` and `bytes(value)` expose those bytes; `.value` returns a fresh JSON projection. This establishes encoding only, without schema, signature or trust claims. Existing invoice, voucher and acceptance profiles remain unchanged. See [the canonical JSON release record](notes/019_release_v0.9.0.md) for the numeric contract and limits. `make test/json` runs its dedicated checks.
 
 ## Source and historical evidence
 

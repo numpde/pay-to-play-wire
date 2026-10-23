@@ -117,7 +117,7 @@ esac
         )
 
     def test_successful_dispatch_grants_only_offline_readonly_sources(self):
-        for campaign in ("invoice", "voucher", "acceptance"):
+        for campaign in ("json", "invoice", "voucher", "acceptance"):
             with self.subTest(campaign=campaign):
                 self.trace.unlink(missing_ok=True)
                 result = self.run_launcher("test/" + campaign)

@@ -261,6 +261,28 @@ Each field accepts the corresponding core object or its dictionary representatio
 
 **Reject duplicate JSON field names before framework parsing.** A dictionary has already lost that information. For a standalone signed message, use its `from_json(original_bytes)` method. For a containing HTTP request such as `PurchaseMessages`, the application must reject duplicates in the original request body before passing it to Pydantic or FastAPI. Parsing encoded JWS headers and payloads remains duplicate-aware because those original bytes are still available.
 
+## Encode or admit canonical JSON
+
+The 0.9.0 candidate adds a separate `CanonicalJSON` value. It does not change the signed profiles or the invoice `JsonNumber` behavior described above. The 0.8.0 installation pin does not include this new API; it will be updated after qualification and publication.
+
+```python
+from wire import CanonicalJSON
+
+canonical = CanonicalJSON.encode({"z": 2, "a": 1})
+assert canonical.bytes == b'{"a":1,"z":2}'
+received = CanonicalJSON.from_bytes(canonical.bytes)
+assert bytes(received) == canonical.bytes
+projection = received.value
+projection["a"] = 99
+assert received.value["a"] == 1
+```
+
+`encode` produces JCS bytes from unsigned values: dictionaries with string keys, lists, strings, booleans, `None`, safe-range Python integers and finite binary64 floats. `from_bytes` admits only already-canonical UTF-8 bytes, retaining them exactly. It rejects duplicate names, invalid Unicode and alternative whitespace, member ordering, escaping or number spelling. The default byte limit is 16,384, with a fixed maximum container depth of 16; callers may supply a positive integer `max_bytes` when larger bodies are expected. Limit incoming body acquisition separately. Invalid encodings raise `CanonicalJSONError`, a `ValueError`.
+
+This class uses binary64 numbers. Exact decimals and large exact integers must be schema-defined strings; `Decimal` and `JsonNumber` are not converted. A binary64 float such as `1e20` canonically encodes as the integer-looking token `100000000000000000000`; its `.value` projection is a float. Safe integer tokens project to Python integers. The spelling alone does not establish exact-integer semantics. JCS also preserves Unicode strings without normalizing different character sequences.
+
+Canonical encoding proves no schema, signature, trusted identity or permission. Applications can use this raw admission before Pydantic when their endpoint explicitly requires a canonical JSON body. It does not impose that contract on existing HTTP endpoints or signed profiles. Never pass received signed bytes through `encode` to make them acceptable; verify and retain their original bytes using the artifact APIs.
+
 ## Shared API and message identity
 
 `SignedInvoice`, `SignedVoucher` and `SignedAcceptance` are immutable objects with these methods:
