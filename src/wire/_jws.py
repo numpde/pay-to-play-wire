@@ -12,6 +12,7 @@ from cryptography.exceptions import InvalidSignature
 
 from ._json import MAX_DOCUMENT_BYTES, load_json
 from ._schema import object_schema
+from .json import signature_failure_hint
 
 MAX_PROTECTED_BYTES = 256
 MAX_PAYLOAD_BYTES = MAX_DOCUMENT_BYTES
@@ -176,6 +177,10 @@ def verify_signature(artifact, public_key):
         public_key.verify(artifact._signature_bytes, artifact.signing_input)
     except InvalidSignature as exc:
         profile = artifact._profile
-        raise profile.error(
+        hint = signature_failure_hint(artifact.payload_bytes)
+        message = (
             f"Cannot verify {profile.name} JWS: signature does not match the trusted {profile.key_role} key and exact segments."
-        ) from exc
+        )
+        failure = profile.error(message + (" " + hint if hint else ""))
+        failure.canonical_json_hint = hint
+        raise failure from exc

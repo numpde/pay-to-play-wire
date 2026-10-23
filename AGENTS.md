@@ -28,6 +28,11 @@ number contract does not replace existing invoice JsonNumber semantics. Keep
 existing signed profiles unchanged until an explicit profile migration.
 Structural voucher parsing must not import Ethereum backends. Applications own
 historical voucher-signer authority, fulfillment and all later status policy.
+Check original bytes before any signature-failure canonicality diagnostic. Inspect
+canonicality only after cryptographic failure, give a safe potential-cause hint,
+and preserve the error type and cause. Never rewrite/retry signed payloads or
+reject valid signatures merely because their JSON is not canonical. The shared
+hint applies to known JSON signature boundaries, not EIP-712 or arbitrary bodies.
 
 Make is the supported interface; help is the default and needs no prerequisites.
 Run all project Python, lint, tests, builds and packaging inside the maintained

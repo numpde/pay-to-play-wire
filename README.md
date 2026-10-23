@@ -100,6 +100,8 @@ Release 0.9.0 adds `from wire import CanonicalJSON` for unsigned JCS encoding an
 
 Release 0.10.0 adds `.encode_json(raw)` to canonicalize ordinary JSON without first passing through a potentially lossy caller parser. It accepts formatting differences and equivalent decimal number spellings, while rejecting duplicate names and precision-changing conversions. `.from_bytes` keeps its separate strict-admission contract. See [the ordinary-input release record](notes/020_release_v0.10.0.md). No CLI, standalone bundle or JavaScript asset is included.
 
+The 0.11.0 candidate adds a canonicality hint after failed invoice or acceptance signature verification, plus the reusable `wire.json.signature_failure_hint` for other JSON signature owners. It never rewrites signed input or retries verification. See [the diagnostic release record](notes/021_release_v0.11.0.md).
+
 ## Source and historical evidence
 
 [AGENTS.md](AGENTS.md) defines repository responsibilities and working rules. [The consolidation record](notes/010_wire_consolidation.txt) identifies copied implementations, donor revisions and adaptations. [The default-installation record](notes/014_complete_default_installation.txt) records the complete package decision. [The acceptance v2 release record](notes/018_release_v0.8.0.md) describes the authenticated signer field and the incompatible profile change. Earlier notes describe their own revisions and historical releases; they do not establish that a consumer has adopted or deployed the current package.

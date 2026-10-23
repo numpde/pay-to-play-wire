@@ -156,3 +156,18 @@ class CanonicalJSON:
 
     def __bytes__(self):
         return self._raw
+
+
+def signature_failure_hint(payload: bytes, *, max_bytes: int = MAX_DOCUMENT_BYTES) -> str | None:
+    """Return a safe canonicality hint only for an already-failed JSON signature.
+
+    The caller owns the cryptographic failure and must keep its original bytes
+    and error. This checks wire's bounded canonical-JSON rules, not signature,
+    schema or trust. A failed check suggests serialization as a possible issue;
+    it does not establish the cause or authorize retrying rewritten bytes.
+    """
+    try:
+        CanonicalJSON.from_bytes(payload, max_bytes=max_bytes)
+    except CanonicalJSONError:
+        return "Payload did not pass canonical JSON checks; serialization differences may be a cause of the signature failure."
+    return None

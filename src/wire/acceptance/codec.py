@@ -13,6 +13,8 @@ MAX_ACCEPTED_AT = MAX_SAFE_INTEGER
 class AcceptanceError(ValueError):
     """An acceptance payload, protected profile or signature is invalid."""
 
+    canonical_json_hint: str | None = None
+
 
 def _document(value):
     if type(value) is not dict or value.keys() != {"signer", "voucher", "acceptedAt"}:

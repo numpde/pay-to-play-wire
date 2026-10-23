@@ -188,6 +188,8 @@ from pathlib import Path
 import wire
 import wire.json as wire_json
 import wire.invoice as invoice
+from wire.json import signature_failure_hint
+from cryptography.exceptions import InvalidSignature
 from wire.invoice import InvoiceError, JsonNumber, SignedInvoice, decode_invoice, encode_invoice, invoice_hash, sign_invoice, verify_invoice
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 import base64
@@ -264,6 +266,22 @@ for case in vectors['cases']:
     fresh = dict(fields, provider=base64.urlsafe_b64encode(other.public_key().public_bytes_raw()).rstrip(b'=').decode())
     fresh_raw = encode_invoice(fresh)
     assert fresh == verify_invoice(sign_invoice(fresh_raw, other), public_key=other.public_key())
+    canonical_raw = wire.CanonicalJSON.encode_json(fresh_raw).bytes
+    canonical_artifact = sign_invoice(canonical_raw, other)
+    noncanonical_raw = b' ' + canonical_raw
+    assert fresh == verify_invoice(sign_invoice(noncanonical_raw, other), public_key=other.public_key())
+    for payload_raw, expected_hint in ((canonical_raw, None), (noncanonical_raw, signature_failure_hint(noncanonical_raw))):
+        payload = base64.urlsafe_b64encode(payload_raw).rstrip(b'=').decode('ascii')
+        signature = (base64.urlsafe_b64encode(bytes(64)).rstrip(b'=').decode('ascii')
+            if expected_hint is None else canonical_artifact.signature)
+        bad = SignedInvoice(canonical_artifact.protected, payload, signature)
+        try:
+            verify_invoice(bad, public_key=other.public_key())
+        except InvoiceError as exc:
+            assert type(exc) is InvoiceError and type(exc.__cause__) is InvalidSignature
+            assert exc.canonical_json_hint == expected_hint
+        else:
+            raise AssertionError('Installed invoice repaired or accepted a failed original-byte signature.')
     signature = base64.urlsafe_b64encode(other.sign(artifact.signing_input)).rstrip(b'=').decode()
     forged = SignedInvoice(artifact.protected, artifact.payload, signature)
     try:
@@ -389,6 +407,9 @@ import wire.acceptance as acceptance_module
 from wire.acceptance import AcceptanceError, SignedAcceptance, decode_acceptance, encode_acceptance, sign_acceptance, verify_acceptance
 from wire.acceptance.pydantic import SignedAcceptanceValue
 from wire.voucher import SignedVoucher
+from wire import CanonicalJSON
+from wire.json import signature_failure_hint
+from cryptography.exceptions import InvalidSignature
 assert Path(acceptance_module.__file__).resolve().is_relative_to(Path(sys.prefix))
 class Response(BaseModel):
     acceptance: SignedAcceptanceValue
@@ -405,6 +426,22 @@ for case in vectors['cases']:
     assert artifact == SignedAcceptance.from_compact(artifact.compact)
     assert raw == artifact.payload_bytes
     assert json.loads(raw) == verify_acceptance(artifact, public_key=public)
+    canonical_raw = CanonicalJSON.encode_json(raw).bytes
+    canonical_artifact = sign_acceptance(canonical_raw, private)
+    noncanonical_raw = b' ' + canonical_raw
+    assert artifact.document == verify_acceptance(sign_acceptance(noncanonical_raw, private), public_key=public)
+    for payload_raw, expected_hint in ((canonical_raw, None), (noncanonical_raw, signature_failure_hint(noncanonical_raw))):
+        payload = base64.urlsafe_b64encode(payload_raw).rstrip(b'=').decode('ascii')
+        signature = (base64.urlsafe_b64encode(bytes(64)).rstrip(b'=').decode('ascii')
+            if expected_hint is None else canonical_artifact.signature)
+        bad = SignedAcceptance(canonical_artifact.protected, payload, signature)
+        try:
+            verify_acceptance(bad, public_key=public)
+        except AcceptanceError as exc:
+            assert type(exc) is AcceptanceError and type(exc.__cause__) is InvalidSignature
+            assert exc.canonical_json_hint == expected_hint
+        else:
+            raise AssertionError('Installed acceptance repaired or accepted a failed original-byte signature.')
     assert artifact.voucher == SignedVoucher.from_json(artifact.voucher.to_json())
     assert json.loads(raw)['voucher']['signature'] == artifact.voucher.signature
     assert artifact.accepted_at == json.loads(raw)['acceptedAt']

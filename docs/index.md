@@ -354,6 +354,30 @@ The raw parsers reject duplicate field names and malformed UTF-8/JSON. Invoice J
 
 Core diagnostics identify the failed rule without echoing the document. Invoice protocol failures, including incorrect field types in message dictionaries, use `InvoiceError`; acceptance failures use `AcceptanceError`; voucher protocol failures use `ValueError`. Explicitly typed API arguments, such as byte inputs, key objects and deployment-domain objects, use `TypeError` when their type contracts are violated. Backend failures propagate except for the deliberately translated verification errors. Pydantic reports format failures as `ValidationError` through its own interface.
 
+### Signature-failure format hints
+
+The 0.11.0 candidate adds `.canonical_json_hint` to invoice and acceptance errors. Only an actual cryptographic signature failure triggers inspection of the original payload. If it does not pass this package's canonical JSON checks, the error includes a fixed safe hint that serialization differences may be a cause. The failure type and original cryptographic cause are preserved. A valid noncanonical payload still verifies; no payload is rewritten or retried.
+
+This example deliberately damages a signature from the earlier local invoice demonstration:
+
+```python
+from wire.invoice import InvoiceError
+from wire.json import signature_failure_hint
+
+damaged = SignedInvoice(received_invoice.protected, received_invoice.payload, "A" * 86)
+try:
+    verify_invoice(damaged, public_key=trusted_provider_key)
+except InvoiceError as failure:
+    hint = failure.canonical_json_hint
+    assert hint is not None
+    assert "may be a cause" in hint
+    assert signature_failure_hint(damaged.payload_bytes) == hint
+else:
+    raise AssertionError("The damaged signature unexpectedly verified.")
+```
+
+The reusable `signature_failure_hint(original_payload, *, max_bytes=16384)` returns a safe string or `None`, without echoing payload fields or exception text. Use it only after a cryptographic failure at a known JSON signature boundary, and pass the already-enforced body limit for larger payloads. It checks wire's bounded canonical-JSON rules and reports a possible issue, not a definitive cause. It does not apply automatically to non-JSON HTTP bodies, Content-Digest mismatches, parsing failures or general JOSE errors. Voucher EIP-712 verification is unchanged because JSON formatting is not its signed input.
+
 ## Reproducibility and verification evidence
 
 Release 0.9.0 was built from committed source `3de987104e703fd414488a25105f5a416791bfd5`. Lint, 146 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers canonical JSON encoding and strict byte admission, independent JWS interoperability, exact vector reproduction, carried-signer and trusted-key binding, altered signer/voucher/time rejection, acceptance v1 rejection and acceptance use while Ethereum imports are blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.9.0) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
