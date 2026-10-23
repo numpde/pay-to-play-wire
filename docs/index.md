@@ -21,16 +21,16 @@ A valid signature links a message to a signing key. Your application establishes
 
 Acceptance uses Ed25519. It lets a recipient authenticate a service's signed statement about one exact voucher. The producing application owns the decision to accept and the historical authority of the voucher signer. This format defines no later status or fulfillment policy.
 
-The examples below use release 0.11.0, pinned below. Its signed-message profiles are unchanged from 0.8.0. Version 0.7.0 supports the earlier acceptance profile without `signer`; its artifacts require that older version. To exercise this guide from the repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
+The examples below use release 0.11.1, pinned below. Its signed-message profiles are unchanged from 0.8.0. Version 0.7.0 supports the earlier acceptance profile without `signer`; its artifacts require that older version. To exercise this guide from the repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
 
 ## Install the complete package
 
 Installing `wire` provides all message types and their Pydantic adapters. There are no extras to select. Python 3.12 or later is required; the maintained installation checks use Python 3.12 on Linux amd64.
 
-The following is a requirements-file entry for [release 0.11.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.11.0):
+The following is a requirements-file entry for [release 0.11.1](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.11.1):
 
 ```text
-wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/wire-0.11.0-py3-none-any.whl#sha256=a8f4afdec06ae32436cdd058f5ca19b49d12b7bae743670ec9aa0e58a4543209
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/wire-0.11.1-py3-none-any.whl#sha256=65cd5df565cb4169b93269022dc8b16c77f58397e42b1cd722ff699ea1a76ab9
 ```
 
 Acquire the wheel and its dependencies through your application's dependency workflow, then verify the downloaded bytes before installing offline. The [runtime lock for this release](https://github.com/numpde/pay-to-play-wire/blob/ff661d790ad6e926f6eaac5d7ee7d85af44244d2/requirements/runtime.lock) lists the exact dependency versions and wheel hashes used for the maintained platform. A wheel file alone does not contain those dependencies. Repository contributors can reuse `.work/wire/wheels/` after `make dependencies/check`; that development dependency directory also contains the runtime wheels. Application users can supply their own verified dependency directory without preparing the development image.
@@ -39,9 +39,9 @@ For example, download the package wheel with an explicitly selected network inte
 
 ```sh
 curl --interface eth0 --fail --location \
-  --output wire-0.11.0-py3-none-any.whl \
-  https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/wire-0.11.0-py3-none-any.whl
-printf '%s\n' 'a8f4afdec06ae32436cdd058f5ca19b49d12b7bae743670ec9aa0e58a4543209  wire-0.11.0-py3-none-any.whl' | sha256sum --check
+  --output wire-0.11.1-py3-none-any.whl \
+  https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/wire-0.11.1-py3-none-any.whl
+printf '%s\n' '65cd5df565cb4169b93269022dc8b16c77f58397e42b1cd722ff699ea1a76ab9  wire-0.11.1-py3-none-any.whl' | sha256sum --check
 ```
 
 Once the wheel, runtime lock and dependency wheels have been acquired and verified, install inside your application's Python environment. Replace the three absolute paths below with their local locations. `--no-index` prevents this step from downloading dependencies:
@@ -50,7 +50,7 @@ Once the wheel, runtime lock and dependency wheels have been acquired and verifi
 python -m pip install --no-index --require-hashes \
   --find-links=/absolute/path/to/verified-dependency-wheels \
   -r /absolute/path/to/runtime.lock \
-  'wire @ file:///absolute/path/to/wire-0.11.0-py3-none-any.whl#sha256=a8f4afdec06ae32436cdd058f5ca19b49d12b7bae743670ec9aa0e58a4543209'
+  'wire @ file:///absolute/path/to/wire-0.11.1-py3-none-any.whl#sha256=65cd5df565cb4169b93269022dc8b16c77f58397e42b1cd722ff699ea1a76ab9'
 ```
 
 For work in this repository, run project Python through Make and its maintained containers; see the README rather than installing into the host Python environment.
@@ -352,11 +352,11 @@ The transported object contains exactly `typedData` and `signature`. Python buil
 
 The raw parsers reject duplicate field names and malformed UTF-8/JSON. Invoice JSON also rejects byte-order marks, nonfinite numbers and unpaired Unicode surrogates. The invoice document's depth and number rules apply to all allowed `service` values. Applications receiving HTTP requests must limit body size before parsing, including when the signed message is nested inside a larger request.
 
-Core diagnostics identify the failed rule without echoing the document. Invoice protocol failures, including incorrect field types in message dictionaries, use `InvoiceError`; acceptance failures use `AcceptanceError`; voucher protocol failures use `ValueError`. Explicitly typed API arguments, such as byte inputs, key objects and deployment-domain objects, use `TypeError` when their type contracts are violated. Backend failures propagate except for the deliberately translated verification errors. Pydantic reports format failures as `ValidationError` through its own interface.
+Core diagnostics identify the failed rule without echoing the document. JSON decoding errors distinguish invalid UTF-8 (with a zero-based byte offset), invalid syntax (with a one-based line and column) and excessive parser nesting. Invoice protocol failures, including incorrect field types in message dictionaries, use `InvoiceError`; acceptance failures use `AcceptanceError`; voucher protocol failures use `ValueError`. Explicitly typed API arguments, such as byte inputs, key objects and deployment-domain objects, use `TypeError` when their type contracts are violated. Backend failures propagate except for the deliberately translated verification errors. Pydantic reports format failures as `ValidationError` through its own interface.
 
 ### Signature-failure format hints
 
-Release 0.11.0 adds `.canonical_json_hint` to invoice and acceptance errors. Only an actual cryptographic signature failure triggers inspection of the original payload. If it does not pass this package's canonical JSON checks, the error includes a fixed safe hint that serialization differences may be a cause. The failure type and original cryptographic cause are preserved. A valid noncanonical payload still verifies; no payload is rewritten or retried.
+Invoice and acceptance errors expose `.canonical_json_hint`. Only an actual cryptographic signature failure triggers inspection of the original payload. If it does not pass this package's canonical JSON checks, the error includes a safe hint identifying the failed rule and saying that serialization differences may be a cause. The failure type and original cryptographic cause are preserved. A valid noncanonical payload still verifies; no payload is rewritten or retried.
 
 This example deliberately damages a signature from the earlier local invoice demonstration:
 
@@ -372,15 +372,19 @@ except InvoiceError as failure:
     assert hint is not None
     assert "may be a cause" in hint
     assert signature_failure_hint(damaged.payload_bytes) == hint
+    public_detail = "Invoice signature verification failed. " + hint
+    assert "may be a cause" in public_detail
 else:
     raise AssertionError("The damaged signature unexpectedly verified.")
 ```
 
-The reusable `signature_failure_hint(original_payload, *, max_bytes=16384)` returns a safe string or `None`, without echoing payload fields or exception text. Use it only after a cryptographic failure at a known JSON signature boundary, and pass the already-enforced body limit for larger payloads. It checks wire's bounded canonical-JSON rules and reports a possible issue, not a definitive cause. It does not apply automatically to non-JSON HTTP bodies, Content-Digest mismatches, parsing failures or general JOSE errors. Voucher EIP-712 verification is unchanged because JSON formatting is not its signed input.
+The reusable `signature_failure_hint(original_payload, *, max_bytes=16384)` returns a safe string identifying the failed canonical rule, or `None` when those checks pass. Use it only after a cryptographic failure at a known JSON signature boundary, and pass the already-enforced body limit for larger payloads. It checks wire's bounded canonical-JSON rules and reports a possible issue, not a definitive cause. It does not apply automatically to non-JSON HTTP bodies, Content-Digest mismatches, parsing failures or general JOSE errors. Voucher EIP-712 verification is unchanged because JSON formatting is not its signed input.
+
+For a public response, relay only a non-`None` hint alongside your application's own failure summary, status and code. The error attribute remains `None` for failures that do not trigger the diagnostic. The hint includes only wire's payload-free rule explanation; do not parse its English to classify failures. Keep chained exceptions, tracebacks and Pydantic input details private because they may retain the received document. Applications own the public response and its disclosure policy.
 
 ## Reproducibility and verification evidence
 
-Release 0.11.0 was built from committed source `ff661d790ad6e926f6eaac5d7ee7d85af44244d2`. Lint, 153 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers ordinary JSON normalization, strict byte admission, safe signature-failure hints without rewritten-input retry, independent JWS interoperability, exact vectors and carried-key/trusted-key binding. The acceptance process also runs with Ethereum imports blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.11.0) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
+Release 0.11.1 was built from committed source `3312b3aa275bce5b6888cf467e776c0fc3ad437d`. Lint, 155 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers ordinary JSON normalization, strict byte admission, safe failed-rule hints without rewritten-input retry, distinct parsing diagnostics, independent JWS interoperability, exact vectors and carried-key/trusted-key binding. The acceptance process also runs with Ethereum imports blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.11.1) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
 
 Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The acceptance vector uses the v2 profile introduced in 0.8.0:
 

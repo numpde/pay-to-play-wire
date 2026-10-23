@@ -17,3 +17,11 @@ Wrong argument types and invalid byte limits retain their existing API contracts
 Copied and edited the shared JSON reader, signature diagnostic and voucher parser from revision `207bf2aea22cb74928ef50a4014138df0bc4b4c1`. The changes select safe parser metadata and expose the existing canonical-rule explanation; they add no logging, new error taxonomy or application response format.
 
 Tests exercise exact exception types and causes across all four public parsers, safe positions without secret contents, distinct failed-rule hints, preserved original-byte verification and unchanged successful verification. Fresh installed-wheel checks also require the specific noncanonical-encoding explanation for both JWS profiles.
+
+Published from committed source `3312b3aa275bce5b6888cf467e776c0fc3ad437d`. Lint and all 155 tests passed: 53 repository, 18 JSON/diagnostic, 44 invoice, 18 voucher and 22 acceptance tests. Both fresh installed environments passed. Downloaded draft assets and qualification logs matched the checked bytes before public release.
+
+The release includes the [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/release-build.log), [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/release-test.log), [source inventory](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/source.json) and [artifact hashes](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/sha256.json). These establish package qualification, not consumer adoption or deployment.
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.1/wire-0.11.1-py3-none-any.whl#sha256=65cd5df565cb4169b93269022dc8b16c77f58397e42b1cd722ff699ea1a76ab9
+```
