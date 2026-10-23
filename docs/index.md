@@ -283,6 +283,16 @@ This class uses binary64 numbers. Exact decimals and large exact integers must b
 
 Canonical encoding proves no schema, signature, trusted identity or permission. Applications can use this raw admission before Pydantic when their endpoint explicitly requires a canonical JSON body. It does not impose that contract on existing HTTP endpoints or signed profiles. Never pass received signed bytes through `encode` to make them acceptable; verify and retain their original bytes using the artifact APIs.
 
+The 0.10.0 candidate also accepts ordinary JSON through `encode_json`; this method is not included in the 0.9.0 installation pin above:
+
+```python
+ordinary_json = b'{ "z": 1e0, "a": -0 }\n'
+normalized = CanonicalJSON.encode_json(ordinary_json)
+assert normalized.bytes == b'{"a":0,"z":1}'
+```
+
+This method rejects duplicate names and compares each original numeric token's exact decimal value with its canonical binary64 spelling. Equivalent forms such as `1.0` may normalize; precision-changing values such as `9007199254740993` are rejected. An explicit positive integer `max_bytes` bounds both incoming and resulting canonical bytes, with the same default and depth limits as the other factories. Exact high-precision quantities still need schema-defined strings. `encode_json` returns a derived value suitable for hashing or signing a new document; it does not retain or authenticate the original input. Keep those bytes separately whenever a request signature, JWS profile or artifact identity refers to them. A canonical internal representation does not itself require external clients to send canonical bytes.
+
 ## Shared API and message identity
 
 `SignedInvoice`, `SignedVoucher` and `SignedAcceptance` are immutable objects with these methods:

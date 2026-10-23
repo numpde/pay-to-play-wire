@@ -2,6 +2,7 @@
 
 import math
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 
 import rfc8785
 
@@ -75,8 +76,22 @@ def _encode(value, maximum):
     return raw
 
 
-def _read(raw):
-    return load_json(raw, error=CanonicalJSONError, name="canonical", number_type=_number)
+def _read(raw, number_type=_number):
+    return load_json(raw, error=CanonicalJSONError, name="canonical", number_type=number_type)
+
+
+def _equivalent_number(token):
+    number = _number(token)
+    canonical = _encode(number, MAX_DOCUMENT_BYTES).decode("ascii")
+    try:
+        equivalent = Decimal(token) == Decimal(canonical)
+    except InvalidOperation as exc:
+        raise CanonicalJSONError("Cannot canonicalize JSON: numeric value exceeds supported decimal comparison bounds.") from exc
+    if not equivalent:
+        raise CanonicalJSONError(
+            "Cannot canonicalize JSON: canonical binary64 spelling would change a numeric value; use strings for exact numeric values."
+        )
+    return number
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -113,6 +128,23 @@ class CanonicalJSON:
     def from_bytes(cls, raw: bytes, *, max_bytes: int = MAX_DOCUMENT_BYTES):
         """Admit only already-canonical bytes; this does not authenticate them."""
         return cls(raw, max_bytes=max_bytes)
+
+    @classmethod
+    def encode_json(cls, raw: bytes, *, max_bytes: int = MAX_DOCUMENT_BYTES):
+        """Derive canonical JSON without changing decimal numeric values.
+
+        Duplicate names are rejected before projection. Exact decimal comparison
+        allows equivalent number spellings but rejects precision loss to JCS.
+        For signed requests or artifacts, preserve the original bytes for their
+        verifier; this value is a separate projection, never a replacement.
+        from_bytes applies only when canonical received encoding is required.
+        """
+        maximum = _maximum(max_bytes)
+        if type(raw) is not bytes:
+            raise TypeError("JSON for canonicalization must be supplied as exact UTF-8 bytes.")
+        if len(raw) > maximum:
+            raise CanonicalJSONError("Cannot canonicalize JSON: bytes exceed the supplied byte limit.")
+        return cls.encode(_read(raw, _equivalent_number), max_bytes=maximum)
 
     @property
     def bytes(self) -> bytes:

@@ -7,7 +7,7 @@ require_container()
 import json
 import unittest
 from dataclasses import FrozenInstanceError
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from importlib.resources import files
 
 from wire import CanonicalJSON, CanonicalJSONError
@@ -15,6 +15,32 @@ from wire.invoice import JsonNumber
 
 
 class CanonicalTests(unittest.TestCase):
+    def test_unsigned_json_changes_formatting_without_changing_numeric_values(self):
+        raw = b'{ "z": [0.1, 100000000000000000000], "a": "\\u0061" }\n'
+        expected = b'{"a":"a","z":[0.1,100000000000000000000]}'
+        self.assertEqual(expected, CanonicalJSON.encode_json(raw).bytes)
+        for raw, canonical in ((b"1.0", b"1"), (b"-0", b"0"), (b"1e0", b"1"), (b"1e20", b"100000000000000000000")):
+            self.assertEqual(canonical, CanonicalJSON.encode_json(raw).bytes)
+        for raw in (b"9007199254740993", b"0.10000000000000001", b'{"a":1,"a":1}', b"1e9999"):
+            with self.subTest(raw=raw), self.assertRaises(CanonicalJSONError):
+                CanonicalJSON.encode_json(raw)
+        with self.assertRaises(TypeError):
+            CanonicalJSON.encode_json("{}")
+        with self.assertRaises(CanonicalJSONError):
+            CanonicalJSON.encode_json(b" {}", max_bytes=2)
+        with self.assertRaises(CanonicalJSONError):
+            CanonicalJSON.encode_json(b"1e20", max_bytes=4)
+        self.assertEqual(b"100000000000000000000", CanonicalJSON.encode_json(b"1e20", max_bytes=21).bytes)
+
+    def test_unsigned_number_comparison_is_exact_despite_decimal_context_precision(self):
+        with localcontext() as context:
+            context.prec = 1
+            self.assertEqual(b"1.25", CanonicalJSON.encode_json(b"1.2500").bytes)
+            with self.assertRaises(CanonicalJSONError):
+                CanonicalJSON.encode_json(b"1.25000000000000001")
+        with self.assertRaises(CanonicalJSONError):
+            CanonicalJSON.encode_json(b"1e-" + b"9" * 100)
+
     def test_installed_shared_vectors(self):
         vectors = json.loads(files("wire").joinpath("vectors/json.json").read_bytes())
         for case in vectors["cases"]:
@@ -24,6 +50,11 @@ class CanonicalTests(unittest.TestCase):
         for raw in vectors["rejectedUtf8"]:
             with self.subTest(raw=raw), self.assertRaises(CanonicalJSONError):
                 CanonicalJSON.from_bytes(raw.encode())
+        for case in vectors["inputCases"]:
+            self.assertEqual(case["canonicalUtf8"].encode(), CanonicalJSON.encode_json(case["inputUtf8"].encode()).bytes)
+        for raw in vectors["rejectedInputUtf8"]:
+            with self.subTest(raw=raw), self.assertRaises(CanonicalJSONError):
+                CanonicalJSON.encode_json(raw.encode())
 
     def test_jcs_reference_numbers_and_utf16_key_order(self):
         # RFC 8785 sections 3.2.2 and 3.2.3, independently specified bytes.
@@ -158,7 +189,10 @@ class CanonicalTests(unittest.TestCase):
         self.assertEqual(raw, CanonicalJSON.encode("a" * 20000, max_bytes=32768).bytes)
         self.assertEqual(raw, admitted.bytes)
         self.assertEqual("a" * 20000, admitted.value)
+        self.assertEqual(raw, CanonicalJSON.encode_json(b" " + raw + b"\n", max_bytes=32768).bytes)
         with self.assertRaises(CanonicalJSONError):
             CanonicalJSON.from_bytes(raw)
         with self.assertRaises(CanonicalJSONError):
             CanonicalJSON.from_bytes(raw, max_bytes=20001)
+        with self.assertRaises(CanonicalJSONError):
+            CanonicalJSON.encode_json(b" " + raw + b"\n")

@@ -19,8 +19,11 @@ Signing requires equality with the private key's public key; verification requir
 equality with the caller-supplied trusted key. Carry identity on wire rather than
 requiring a separate saved key or database lookup; trust remains application-owned.
 No opaque signer selector or acceptance hash. Reject the old acceptance profile.
-CanonicalJSON owns canonical UTF-8 JCS bytes and strict raw-byte admission only;
-it proves no schema, signature, key trust or purchase outcome. Its binary64
+CanonicalJSON owns canonical UTF-8 JCS values: encode_json derives them from
+ordinary JSON without precision-changing numeric conversions; from_bytes is
+strict admission only for explicitly canonical received-byte contracts. Keep
+original signed bytes separately from any derived projection. CanonicalJSON
+proves no schema, signature, key trust or purchase outcome. Its binary64
 number contract does not replace existing invoice JsonNumber semantics. Keep
 existing signed profiles unchanged until an explicit profile migration.
 Structural voucher parsing must not import Ethereum backends. Applications own

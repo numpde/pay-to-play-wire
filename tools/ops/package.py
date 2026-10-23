@@ -220,8 +220,17 @@ for raw in canonical_vectors['rejectedUtf8']:
         pass
     else:
         raise AssertionError('Installed canonical JSON admitted an alternative encoding.')
+for case in canonical_vectors['inputCases']:
+    assert wire.CanonicalJSON.encode_json(case['inputUtf8'].encode('utf-8')).bytes == case['canonicalUtf8'].encode('utf-8')
+for raw in canonical_vectors['rejectedInputUtf8']:
+    try:
+        wire.CanonicalJSON.encode_json(raw.encode('utf-8'))
+    except wire.CanonicalJSONError:
+        pass
+    else:
+        raise AssertionError('Installed JSON normalization changed numeric values or dropped duplicate members.')
 assert type(wire.CanonicalJSON.from_bytes(b'100000000000000000000').value) is float
-print('Installed canonical JSON: origin, shared vectors, binary64 and strict byte admission passed.')
+print('Installed canonical JSON: origin, ordinary JSON normalization, numeric value preservation and strict byte admission passed.')
 vectors = json.loads(importlib.resources.files('wire').joinpath('vectors/invoice.json').read_bytes())
 json.loads(importlib.resources.files('wire').joinpath('vectors/voucher.json').read_bytes())
 for obsolete in ('validate_payment_route', 'require_merchant_id', 'require_identifier',
