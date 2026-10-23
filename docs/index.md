@@ -21,27 +21,27 @@ A valid signature links a message to a signing key. Your application establishes
 
 Acceptance uses Ed25519. It lets a recipient authenticate a service's signed statement about one exact voucher. The producing application owns the decision to accept and the historical authority of the voucher signer. This format defines no later status or fulfillment policy.
 
-The acceptance v2 examples below require the 0.8.0 candidate in this checkout. The published 0.7.0 pin below supports the earlier acceptance profile without `signer`. To exercise the candidate guide, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order. The installation pin will be updated after the new release is qualified and published.
+The acceptance v2 examples below use release 0.8.0, pinned below. Version 0.7.0 supports the earlier acceptance profile without `signer`; its artifacts require that older version. To exercise this guide from the repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
 
 ## Install the complete package
 
 Installing `wire` provides all message types and their Pydantic adapters. There are no extras to select. Python 3.12 or later is required; the maintained installation checks use Python 3.12 on Linux amd64.
 
-The following is a requirements-file entry for [release 0.7.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.7.0):
+The following is a requirements-file entry for [release 0.8.0](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.8.0):
 
 ```text
-wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.7.0/wire-0.7.0-py3-none-any.whl#sha256=bf009da1d19a48c3bf7fa7d1d324af75d4201301c0dde377be08db829c90b1da
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/wire-0.8.0-py3-none-any.whl#sha256=829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae
 ```
 
-Acquire the wheel and its dependencies through your application's dependency workflow, then verify the downloaded bytes before installing offline. The [runtime lock for this release](https://github.com/numpde/pay-to-play-wire/blob/3c0930fa54386692af45af08aee3ca5473486fba/requirements/runtime.lock) lists the exact dependency versions and wheel hashes used for the maintained platform. A wheel file alone does not contain those dependencies. Repository contributors can reuse `.work/wire/wheels/` after `make dependencies/check`; that development dependency directory also contains the runtime wheels. Application users can supply their own verified dependency directory without preparing the development image.
+Acquire the wheel and its dependencies through your application's dependency workflow, then verify the downloaded bytes before installing offline. The [runtime lock for this release](https://github.com/numpde/pay-to-play-wire/blob/55b003102415ca20af2f288080a7d2fea7ecea50/requirements/runtime.lock) lists the exact dependency versions and wheel hashes used for the maintained platform. A wheel file alone does not contain those dependencies. Repository contributors can reuse `.work/wire/wheels/` after `make dependencies/check`; that development dependency directory also contains the runtime wheels. Application users can supply their own verified dependency directory without preparing the development image.
 
 For example, download the package wheel with an explicitly selected network interface. Replace `eth0` with an interface available on your machine:
 
 ```sh
 curl --interface eth0 --fail --location \
-  --output wire-0.7.0-py3-none-any.whl \
-  https://github.com/numpde/pay-to-play-wire/releases/download/v0.7.0/wire-0.7.0-py3-none-any.whl
-printf '%s\n' 'bf009da1d19a48c3bf7fa7d1d324af75d4201301c0dde377be08db829c90b1da  wire-0.7.0-py3-none-any.whl' | sha256sum --check
+  --output wire-0.8.0-py3-none-any.whl \
+  https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/wire-0.8.0-py3-none-any.whl
+printf '%s\n' '829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae  wire-0.8.0-py3-none-any.whl' | sha256sum --check
 ```
 
 Once the wheel, runtime lock and dependency wheels have been acquired and verified, install inside your application's Python environment. Replace the three absolute paths below with their local locations. `--no-index` prevents this step from downloading dependencies:
@@ -50,7 +50,7 @@ Once the wheel, runtime lock and dependency wheels have been acquired and verifi
 python -m pip install --no-index --require-hashes \
   --find-links=/absolute/path/to/verified-dependency-wheels \
   -r /absolute/path/to/runtime.lock \
-  'wire @ file:///absolute/path/to/wire-0.7.0-py3-none-any.whl#sha256=bf009da1d19a48c3bf7fa7d1d324af75d4201301c0dde377be08db829c90b1da'
+  'wire @ file:///absolute/path/to/wire-0.8.0-py3-none-any.whl#sha256=829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae'
 ```
 
 For work in this repository, run project Python through Make and its maintained containers; see the README rather than installing into the host Python environment.
@@ -324,9 +324,9 @@ Core diagnostics identify the failed rule without echoing the document. Invoice 
 
 ## Reproducibility and verification evidence
 
-The preceding 0.7.0 release was built from committed source `3c0930fa54386692af45af08aee3ca5473486fba`. Lint, 134 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. Those checks cover the earlier acceptance v1 profile. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [0.7.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.7.0) contains that version's source distribution, source inventory, hash manifest and logs. Acceptance v2 frozen-source and installed-artifact qualification remains pending for the 0.8.0 candidate.
+Release 0.8.0 was built from committed source `55b003102415ca20af2f288080a7d2fea7ecea50`. Lint, 137 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. The combined campaign covers independent JWS interoperability, exact vector reproduction, carried-signer and trusted-key binding, altered signer/voucher/time rejection, v1 rejection and acceptance use while Ethereum imports are blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.8.0) contains the source distribution, source inventory, hash manifest and logs. These are package checks, not proof of application deployment or live payment.
 
-Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The candidate acceptance vector uses the v2 profile introduced in 0.8.0:
+Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The acceptance vector uses the v2 profile introduced in 0.8.0:
 
 ```python
 from importlib.resources import files

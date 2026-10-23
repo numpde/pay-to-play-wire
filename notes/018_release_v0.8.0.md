@@ -22,7 +22,17 @@ Invoice and voucher formats, signature rules, invoice hashes and public APIs are
 
 ## Qualification and provenance
 
-The implemented acceptance campaign covers successful exact-byte signing and verification, canonical key encoding, mismatched signing keys, untrusted self-declared keys, disagreement between carried signer and actual signature key, signer/voucher/time mutation, v1 rejection, independent JWS interoperability and blocked Ethereum imports. Installed-package checks exercise the same key/trust boundaries against both the wheel and a wheel rebuilt from the source distribution. Frozen release results are recorded after qualification and publication. The shared v2 vector is installed at `wire/vectors/acceptance.json`.
+Published from committed source `55b003102415ca20af2f288080a7d2fea7ecea50`. Lint and all 137 tests passed: 53 repository, 44 invoice, 18 voucher and 22 acceptance tests. Fresh installations of both the wheel and a wheel rebuilt from the source distribution passed the installed-package checks.
+
+The combined campaign covers successful exact-byte signing and verification, canonical key encoding, mismatched signing keys, untrusted self-declared keys, disagreement between carried signer and actual signature key, signer/voucher/time mutation, v1 rejection, independent JWS interoperability and blocked Ethereum imports. The shared v2 vector is installed at `wire/vectors/acceptance.json`, with SHA256 `3cb117323c5acd63d69f2e29a61a070c89f9c5eec10dc372217079a6fb9c18c0`.
+
+The release includes the [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/release-build.log), [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/release-test.log), [source inventory](https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/source.json) and [artifact hashes](https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/sha256.json). Downloaded draft assets and logs matched the qualified files before publication; an anonymous download of the public wheel also matched. These checks establish package behavior, not consumer deployment or live payment results.
+
+Use this requirements-file entry with the release's [runtime dependency lock](https://github.com/numpde/pay-to-play-wire/blob/55b003102415ca20af2f288080a7d2fea7ecea50/requirements/runtime.lock) and your dependency verification workflow:
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.8.0/wire-0.8.0-py3-none-any.whl#sha256=829f9ddc289693acdb20a595935044b0f38af262fbb68192f8b60a1def786dae
+```
 
 The public-key representation validator was copied from `src/wire/invoice/fields.py` at revision `72c3de87c54e777032caced26a5650aae7e6abaf` into a shared private module. Invoice validation retains its public API and errors; acceptance uses its own protocol errors. Signing-key equality follows the existing invoice provider-binding rule. No parallel voucher schema, signer registry, key loader or acceptance hash was added.
 
