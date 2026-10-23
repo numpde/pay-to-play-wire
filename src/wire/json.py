@@ -168,6 +168,11 @@ def signature_failure_hint(payload: bytes, *, max_bytes: int = MAX_DOCUMENT_BYTE
     """
     try:
         CanonicalJSON.from_bytes(payload, max_bytes=max_bytes)
-    except CanonicalJSONError:
-        return "Payload did not pass canonical JSON checks; serialization differences may be a cause of the signature failure."
+    except CanonicalJSONError as exc:
+        # Only this owner's payload-free rule messages cross the relay boundary;
+        # parser causes can retain the received document and remain private.
+        return (
+            f"Payload did not pass canonical JSON checks. {exc} "
+            "Serialization differences may be a cause of the signature failure."
+        )
     return None

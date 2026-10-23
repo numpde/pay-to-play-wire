@@ -54,7 +54,11 @@ def load_json(raw, *, error, name, number_type=NumberToken):
             parse_float=number_type,
             parse_constant=reject_constant,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
-        raise error(f"Cannot decode {name} JSON: expected strict UTF-8 JSON without a BOM.") from exc
+    except UnicodeDecodeError as exc:
+        raise error(f"Cannot decode {name} JSON: invalid UTF-8 at byte {exc.start}.") from exc
+    except json.JSONDecodeError as exc:
+        raise error(f"Cannot decode {name} JSON: invalid JSON syntax at line {exc.lineno}, column {exc.colno}.") from exc
+    except RecursionError as exc:
+        raise error(f"Cannot decode {name} JSON: container nesting exceeds the parser limit.") from exc
     check_tree(value, 0)
     return value

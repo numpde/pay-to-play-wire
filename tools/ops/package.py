@@ -280,6 +280,8 @@ for case in vectors['cases']:
         except InvoiceError as exc:
             assert type(exc) is InvoiceError and type(exc.__cause__) is InvalidSignature
             assert exc.canonical_json_hint == expected_hint
+            if expected_hint is not None:
+                assert 'received bytes must already use the canonical encoding' in expected_hint
         else:
             raise AssertionError('Installed invoice repaired or accepted a failed original-byte signature.')
     signature = base64.urlsafe_b64encode(other.sign(artifact.signing_input)).rstrip(b'=').decode()
@@ -440,6 +442,8 @@ for case in vectors['cases']:
         except AcceptanceError as exc:
             assert type(exc) is AcceptanceError and type(exc.__cause__) is InvalidSignature
             assert exc.canonical_json_hint == expected_hint
+            if expected_hint is not None:
+                assert 'received bytes must already use the canonical encoding' in expected_hint
         else:
             raise AssertionError('Installed acceptance repaired or accepted a failed original-byte signature.')
     assert artifact.voucher == SignedVoucher.from_json(artifact.voucher.to_json())

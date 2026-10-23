@@ -98,7 +98,7 @@ If either publisher fails, it reports retained inputs, logs and API receipts und
 
 `from wire import CanonicalJSON` provides `.encode(value)` for Python JSON values, `.encode_json(raw)` for ordinary JSON bytes, and `.from_bytes(raw)` for strict admission of already-canonical bytes. Each returns an immutable value; `.bytes` and `bytes(value)` expose its bytes, and `.value` returns a fresh projection. Ordinary-input normalization accepts equivalent decimal number spellings while rejecting duplicate names and precision-changing conversions. This establishes encoding only, without schema, signature or trust claims. See the [canonical JSON contract](notes/019_release_v0.9.0.md) and [ordinary-input rules](notes/020_release_v0.10.0.md) for precision and limits. `make test/json` runs the checks.
 
-Failed invoice or acceptance signature verification can include a safe canonicality hint. `wire.json.signature_failure_hint` provides the same diagnostic for other known JSON signature owners after cryptographic failure. Original signed bytes, profiles and verification outcomes remain authoritative; there is no rewritten-input retry. See [the diagnostic release record](notes/021_release_v0.11.0.md).
+Failed invoice or acceptance signature verification can include a safe canonicality hint identifying the rule that failed. `wire.json.signature_failure_hint` provides the same diagnostic for other known JSON signature owners after cryptographic failure. Original signed bytes, profiles and verification outcomes remain authoritative; there is no rewritten-input retry. See [the diagnostic release record](notes/022_release_v0.11.1.md).
 
 ## Source and historical evidence
 

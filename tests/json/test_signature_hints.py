@@ -5,6 +5,7 @@ from tools.ops.container_guard import require_container
 require_container()
 
 import base64
+import json
 import unittest
 from unittest.mock import patch
 
@@ -13,10 +14,18 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from tests.helpers.acceptances import document, receipt_key
 from tests.helpers.invoices import invoice_fields
-from wire import CanonicalJSON
-from wire.acceptance import AcceptanceError, SignedAcceptance, encode_acceptance, sign_acceptance, verify_acceptance
-from wire.invoice import InvoiceError, SignedInvoice, encode_invoice, sign_invoice, verify_invoice
+from wire import CanonicalJSON, CanonicalJSONError
+from wire.acceptance import (
+    AcceptanceError,
+    SignedAcceptance,
+    decode_acceptance,
+    encode_acceptance,
+    sign_acceptance,
+    verify_acceptance,
+)
+from wire.invoice import InvoiceError, SignedInvoice, decode_invoice, encode_invoice, sign_invoice, verify_invoice
 from wire.json import signature_failure_hint
+from wire.voucher import SignedVoucher
 
 
 def segment(raw):
@@ -91,9 +100,45 @@ class SignatureHintTests(unittest.TestCase):
         for raw in (b'{ "private":"do-not-echo"}', b"invalid-json", b"\xff", b'{"a":1,"a":2}'):
             hint = signature_failure_hint(raw)
             self.assertEqual(str, type(hint))
-            self.assertLess(len(hint), 200)
+            self.assertLess(len(hint), 400)
             self.assertNotIn("do-not-echo", hint)
         with self.assertRaises(TypeError):
             signature_failure_hint("{}")
         raw = b'"' + b"a" * 20000 + b'"'
         self.assertEqual(None, signature_failure_hint(raw, max_bytes=32768))
+
+    def test_hint_relays_the_failed_rule_without_parser_document_or_cause(self):
+        for raw, reason in (
+            (b'{"secret":"do-not-echo",}', "line 1, column 25"),
+            (b'"do-not-echo\xff"', "invalid UTF-8 at byte 12"),
+            (b'{"secret":"do-not-echo","secret":0}', "duplicate object member"),
+            (b' {"secret":"do-not-echo"}', "received bytes must already use the canonical encoding"),
+            (b'"' + b"x" * 20000 + b'"', "supplied byte limit"),
+        ):
+            with self.subTest(reason=reason):
+                hint = signature_failure_hint(raw)
+                self.assertIn(reason, hint)
+                self.assertIn("may be a cause", hint)
+                self.assertNotIn("do-not-echo", hint)
+                self.assertNotIn("Traceback", hint)
+                self.assertLess(len(hint), 400)
+
+    def test_json_parsers_preserve_distinct_safe_diagnostics_and_original_causes(self):
+        parsers = (
+            (CanonicalJSONError, CanonicalJSON.from_bytes),
+            (InvoiceError, decode_invoice),
+            (AcceptanceError, decode_acceptance),
+            (ValueError, SignedVoucher.from_json),
+        )
+        for error, parse in parsers:
+            for raw, cause, reason in (
+                (b'{"secret":"do-not-echo",}', json.JSONDecodeError, "line 1, column 25"),
+                (b'"do-not-echo\xff"', UnicodeDecodeError, "invalid UTF-8 at byte 12"),
+            ):
+                with self.subTest(parser=parse, reason=reason):
+                    with self.assertRaises(error) as caught:
+                        parse(raw)
+                    self.assertEqual(error, type(caught.exception))
+                    self.assertEqual(cause, type(caught.exception.__cause__))
+                    self.assertIn(reason, str(caught.exception))
+                    self.assertNotIn("do-not-echo", str(caught.exception))

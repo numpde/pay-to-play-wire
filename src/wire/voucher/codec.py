@@ -113,8 +113,12 @@ def _json(raw):
         raise ValueError("Cannot read voucher: JSON input exceeds 8192 bytes.")
     try:
         return json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_fields, parse_constant=_reject_constant)
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
-        raise ValueError("Cannot read voucher: input must be a bounded UTF-8 JSON document.") from exc
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"Cannot read voucher: invalid UTF-8 at byte {exc.start}.") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Cannot read voucher: invalid JSON syntax at line {exc.lineno}, column {exc.colno}.") from exc
+    except RecursionError as exc:
+        raise ValueError("Cannot read voucher: container nesting exceeds the parser limit.") from exc
 
 
 @dataclass(frozen=True, slots=True)
