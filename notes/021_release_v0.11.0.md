@@ -25,4 +25,12 @@ Pass the caller's already-enforced body limit as `max_bytes` for larger payloads
 
 Both JWS profiles use the existing shared verifier from revision `3b57b0cfa1f4e06ccce47273a805a877a811541d`. Canonicality inspection reuses `CanonicalJSON.from_bytes`; the public helper and structured error attribute avoid separate application canonicalizers or message parsing. Dependency versions, locked hashes and installation requirements are unchanged.
 
-Tests cover both profiles with valid noncanonical signatures, canonical failed signatures, noncanonical failed signatures, and key-binding failures. A rejection case carries a signature that would succeed if the payload were rewritten, proving the verifier does not repair and retry it. Tests also check exact error types and causes, safe hint contents, successful larger-body inspection and unchanged artifacts. Installed-distribution checks cover both profiles, including the acceptance process with Ethereum imports blocked. Frozen release results are recorded after qualification.
+Tests cover both profiles with valid noncanonical signatures, canonical failed signatures, noncanonical failed signatures, and key-binding failures. A rejection case carries a signature that would succeed if the payload were rewritten, proving the verifier does not repair and retry it. Tests also check exact error types and causes, safe hint contents, successful larger-body inspection and unchanged artifacts. Installed-distribution checks cover both profiles, including the acceptance process with Ethereum imports blocked.
+
+Published from committed source `ff661d790ad6e926f6eaac5d7ee7d85af44244d2`. Lint and all 153 tests passed: 53 repository, 16 JSON/diagnostic, 44 invoice, 18 voucher and 22 acceptance tests. Both fresh installed environments passed the diagnostic and existing protocol checks. Downloaded draft assets and logs matched before publication; an anonymous public-wheel download also matched.
+
+The release includes the [build log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/release-build.log), [test log](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/release-test.log), [source inventory](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/source.json) and [artifact hashes](https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/sha256.json). These establish package qualification, not consumer adoption or deployment.
+
+```text
+wire @ https://github.com/numpde/pay-to-play-wire/releases/download/v0.11.0/wire-0.11.0-py3-none-any.whl#sha256=a8f4afdec06ae32436cdd058f5ca19b49d12b7bae743670ec9aa0e58a4543209
+```
