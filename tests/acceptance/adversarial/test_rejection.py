@@ -40,12 +40,49 @@ class RejectionTests(unittest.TestCase):
         signature = segment(receipt_key().sign((protected + "." + payload).encode("ascii")))
         return {"protected": protected, "payload": payload, "signature": signature}
 
-    def test_only_the_two_payload_fields_are_accepted(self):
+    def test_only_the_three_payload_fields_are_accepted(self):
         values = [None, [], {}, {"voucher": document()["voucher"]}, {"acceptedAt": 0}]
-        values.extend(dict(document(), **{name: "extra"}) for name in ("invoiceHash", "signer", "uuid", "hash", "status"))
+        values.extend({key: value for key, value in document().items() if key != missing} for missing in document())
+        values.extend(dict(document(), **{name: "extra"}) for name in ("invoiceHash", "kid", "uuid", "hash", "status"))
         for value in values:
             with self.subTest(value=value), self.assertRaises(AcceptanceError):
                 decode_acceptance(json.dumps(value).encode())
+
+    def test_signer_requires_canonical_raw32_public_key_text(self):
+        for value in (None, True, 1, [], {}, "", "A" * 42, "A" * 44, "A" * 42 + "B", "A" * 43 + "=", "+" * 43, "é" * 43):
+            with self.subTest(value=value), self.assertRaises(AcceptanceError):
+                encode_acceptance(dict(document(), signer=value))
+            with self.subTest(json_value=value), self.assertRaises(AcceptanceError):
+                decode_acceptance(json.dumps(dict(document(), signer=value)).encode())
+
+    def test_signer_identity_and_caller_trust_are_both_required(self):
+        other_key = Ed25519PrivateKey.generate()
+        other = dict(document(), signer=segment(other_key.public_key().public_bytes_raw()))
+        raw = encode_acceptance(other)
+        with self.assertRaises(AcceptanceError):
+            sign_acceptance(raw, receipt_key())
+        signed = sign_acceptance(raw, other_key)
+        self.assertEqual(other, verify_acceptance(signed, public_key=other_key.public_key()))
+        with self.assertRaises(AcceptanceError):
+            verify_acceptance(signed, public_key=receipt_key().public_key())
+        # Even a valid signature from the trusted key cannot name a different signer.
+        mismatched = SignedAcceptance.from_dict(self.external(raw=raw))
+        with self.assertRaises(AcceptanceError):
+            verify_acceptance(mismatched, public_key=receipt_key().public_key())
+        with self.assertRaises(AcceptanceError) as caught:
+            verify_acceptance(mismatched, public_key=other_key.public_key())
+        self.assertEqual(InvalidSignature, type(caught.exception.__cause__))
+
+    def test_v1_profile_is_rejected_with_and_without_the_new_field(self):
+        header = b'{"alg":"Ed25519","typ":"application/vnd.signed-purchase-acceptance.v1+json"}'
+        with self.assertRaises(AcceptanceError):
+            SignedAcceptance.from_dict(self.external(header=header))
+        old = document()
+        del old["signer"]
+        with self.assertRaises(AcceptanceError):
+            SignedAcceptance.from_dict(self.external(raw=json.dumps(old).encode(), header=header))
+        with self.assertRaises(AcceptanceError):
+            SignedAcceptance.from_dict(self.external(raw=json.dumps(old).encode()))
 
     def test_accepted_at_lexical_types_and_range_are_not_coerced(self):
         for token in (
@@ -99,6 +136,8 @@ class RejectionTests(unittest.TestCase):
             b'{"voucher":' + b"[" * 16 + b"0" + b"]" * 16 + b',"acceptedAt":0}',
             self.raw[:-1] + b',"acceptedAt":0}',
             self.raw[:-1] + b',"accepted\\u0041t":0}',
+            self.raw[:-1] + b',"signer":"' + document()["signer"].encode() + b'"}',
+            self.raw[:-1] + b',"sign\\u0065r":"' + document()["signer"].encode() + b'"}',
             self.raw.replace(b'"chainId":"31337"', b'"chainId":"31337","chainId":"31337"'),
             self.raw.replace(b'"version":"2"', b'"version":"\\ud800"'),
             self.raw.replace(b'"acceptedAt":2000000000', b'"acceptedAt":NaN'),
@@ -148,7 +187,7 @@ class RejectionTests(unittest.TestCase):
             SignedAcceptance.from_dict(self.external(header=b'{"alg":"Ed25519","typ":"application/vnd.signed-invoice.v1+json"}'))
 
     def test_equivalent_media_spelling_retains_signed_bytes_and_verifies(self):
-        header = b'{ "typ":"VND.SIGNED-PURCHASE-ACCEPTANCE.V1+JSON", "alg":"Ed25519" }'
+        header = b'{ "typ":"VND.SIGNED-PURCHASE-ACCEPTANCE.V2+JSON", "alg":"Ed25519" }'
         artifact = SignedAcceptance.from_dict(self.external(header=header))
         self.assertNotEqual(self.artifact.protected, artifact.protected)
         self.assertEqual(segment(header), artifact.protected)
@@ -168,15 +207,16 @@ class RejectionTests(unittest.TestCase):
                 SignedAcceptance.from_dict(dict(self.artifact.to_dict(), signature=signature))
 
     def test_forgery_and_each_carried_field_mutation_fail_receipt_verification(self):
-        with self.assertRaises(AcceptanceError) as caught:
+        with self.assertRaises(AcceptanceError):
             verify_acceptance(self.artifact, public_key=Ed25519PrivateKey.generate().public_key())
-        self.assertEqual(InvalidSignature, type(caught.exception.__cause__))
         signature = bytearray(base64.urlsafe_b64decode(self.artifact.signature + "=="))
         signature[0] ^= 1
         forged = SignedAcceptance(self.artifact.protected, self.artifact.payload, segment(bytes(signature)))
-        with self.assertRaises(AcceptanceError):
+        with self.assertRaises(AcceptanceError) as caught:
             verify_acceptance(forged, public_key=receipt_key().public_key())
+        self.assertEqual(InvalidSignature, type(caught.exception.__cause__))
         mutations = (
+            lambda value: value.update(signer=segment(Ed25519PrivateKey.generate().public_key().public_bytes_raw())),
             lambda value: value.update(acceptedAt=value["acceptedAt"] + 1),
             lambda value: value["voucher"]["typedData"]["domain"].update(chainId="31338"),
             lambda value: value["voucher"]["typedData"]["domain"].update(verifyingContract="0x" + "44" * 20),

@@ -27,10 +27,13 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(SignedVoucher.from_dict(json.loads(raw)["voucher"]), artifact.voucher)
             self.assertEqual(json.loads(raw)["voucher"]["signature"], artifact.voucher.signature)
             self.assertEqual(2000000000, artifact.accepted_at)
+            self.assertEqual(json.loads(raw)["signer"], artifact.signer)
 
     def test_payload_whitespace_order_and_outer_json_formatting_preserve_original_segments(self):
         fields = document()
-        raw = json.dumps({"acceptedAt": fields["acceptedAt"], "voucher": fields["voucher"]}, indent=2).encode("utf-8")
+        raw = json.dumps(
+            {"acceptedAt": fields["acceptedAt"], "voucher": fields["voucher"], "signer": fields["signer"]}, indent=2
+        ).encode("utf-8")
         artifact = sign_acceptance(raw, receipt_key())
         self.assertEqual(raw, artifact.payload_bytes)
         self.assertEqual(fields, artifact.document)
@@ -55,7 +58,7 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(before, artifact.to_json())
         with self.assertRaises(FrozenInstanceError):
             artifact.signature = "removed"
-        for forbidden in ("acceptance_hash", "invoice_hash", "signer", "uuid"):
+        for forbidden in ("acceptance_hash", "invoice_hash", "uuid"):
             self.assertEqual(False, hasattr(artifact, forbidden))
 
     def test_receipt_authentication_does_not_establish_historical_voucher_authority(self):

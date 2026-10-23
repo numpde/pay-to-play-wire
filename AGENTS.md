@@ -13,8 +13,12 @@ carried segments and hash the complete compact signed artifact. No legacy domain
 Voucher verification requires a caller-supplied trusted deployment domain and
 signer. Preserve the EIP-712 ordered schema, digest and contract signature rules.
 No RPC, key registry, secret custody or purchase policy belongs in this package.
-Acceptance carries exactly the full signed voucher and acceptedAt Unix seconds.
-Its trusted Ed25519 key is caller supplied; no signer selector or acceptance hash.
+Acceptance v2 carries exactly signer, the full signed voucher and acceptedAt signing Unix seconds.
+signer is the canonical raw32 Ed25519 public key encoded as unpadded base64url.
+Signing requires equality with the private key's public key; verification requires
+equality with the caller-supplied trusted key. Carry identity on wire rather than
+requiring a separate saved key or database lookup; trust remains application-owned.
+No opaque signer selector or acceptance hash. Reject the old acceptance profile.
 Structural voucher parsing must not import Ethereum backends. Applications own
 historical voucher-signer authority, fulfillment and all later status policy.
 

@@ -9,6 +9,7 @@ from tools.ops.container_guard import require_container
 
 require_container()
 
+import base64
 import json
 from importlib.resources import files
 
@@ -49,7 +50,13 @@ voucher = sign_voucher(
     ),
     bytes.fromhex(voucher_vectors["testPrivateKey"][2:]),
 )
-raw = encode_acceptance({"voucher": voucher.to_dict(), "acceptedAt": 2000000000})
+raw = encode_acceptance(
+    {
+        "signer": base64.urlsafe_b64encode(key.public_key().public_bytes_raw()).rstrip(b"=").decode("ascii"),
+        "voucher": voucher.to_dict(),
+        "acceptedAt": 2000000000,
+    }
+)
 acceptance = sign_acceptance(raw, key)
 print(
     json.dumps(

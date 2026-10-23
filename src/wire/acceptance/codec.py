@@ -1,9 +1,10 @@
-"""The acceptance payload binds one complete voucher and the recorded acceptance time."""
+"""Acceptance binds its signing key, one complete voucher and signing time."""
 
 import json
 
 from wire._json import MAX_SAFE_INTEGER, UNSIGNED, NumberToken, load_json
 from wire._jws import MAX_PAYLOAD_BYTES
+from wire._keys import require_public_key
 from wire.voucher import SignedVoucher
 
 MAX_ACCEPTED_AT = MAX_SAFE_INTEGER
@@ -14,8 +15,12 @@ class AcceptanceError(ValueError):
 
 
 def _document(value):
-    if type(value) is not dict or value.keys() != {"voucher", "acceptedAt"}:
-        raise AcceptanceError("Cannot parse acceptance: payload must contain exactly voucher and acceptedAt.")
+    if type(value) is not dict or value.keys() != {"signer", "voucher", "acceptedAt"}:
+        raise AcceptanceError("Cannot parse acceptance: payload must contain exactly signer, voucher and acceptedAt.")
+    try:
+        signer = require_public_key(value["signer"], "acceptance signer", error=AcceptanceError)
+    except TypeError as exc:
+        raise AcceptanceError("Cannot parse acceptance: signer must be an encoded Ed25519 public key string.") from exc
     accepted_at = value["acceptedAt"]
     if type(accepted_at) is not int or not 0 <= accepted_at <= MAX_ACCEPTED_AT:
         raise AcceptanceError("Cannot parse acceptance: acceptedAt must be integer Unix seconds in 0..2^53-1.")
@@ -23,7 +28,7 @@ def _document(value):
         voucher = SignedVoucher.from_dict(value["voucher"])
     except (TypeError, ValueError) as exc:
         raise AcceptanceError("Cannot parse acceptance: voucher must be a complete strict PayToPlay/2 signed voucher.") from exc
-    return {"voucher": voucher.to_dict(), "acceptedAt": accepted_at}
+    return {"signer": signer, "voucher": voucher.to_dict(), "acceptedAt": accepted_at}
 
 
 def decode_acceptance(raw: bytes) -> dict:
@@ -46,7 +51,7 @@ def decode_acceptance(raw: bytes) -> dict:
 
 
 def encode_acceptance(document: dict) -> bytes:
-    """Serialize the two acceptance fields once and validate their wire representation."""
+    """Serialize the acceptance fields once and validate their wire representation."""
     if type(document) is not dict:
         raise TypeError("Acceptance encoding requires a dictionary of payload fields.")
     raw = json.dumps(_document(document), separators=(",", ":")).encode("ascii")

@@ -1,31 +1,22 @@
 """Invoice scalar representations; applications own trust and payment policy."""
 
-import base64
 import re
 
 from wire._json import MAX_SAFE_INTEGER
 from wire._json import UNSIGNED as UNSIGNED
+from wire._keys import require_public_key as _require_public_key
 
 from .errors import InvoiceError
 
 MAX_TIMESTAMP = MAX_SAFE_INTEGER
 MAX_AMOUNT_DIGITS = 16384
 POSITIVE = re.compile(r"[1-9][0-9]*")
-PUBLIC_KEY = re.compile(r"[A-Za-z0-9_-]{43}")
 ASSET = re.compile(r"[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}(?:/[-.%a-zA-Z0-9]{1,78})?")
 
 
 def require_public_key(value: str, name: str = "public key") -> str:
     """Require canonical unpadded base64url of 32 Ed25519 public bytes."""
-    if type(value) is not str:
-        raise TypeError(f"Cannot validate {name}: the public key must be a string.")
-    if PUBLIC_KEY.fullmatch(value) is None:
-        raise InvoiceError(f"Cannot validate {name}: use 43 unpadded base64url characters for an Ed25519 public key.")
-    # Adapted from Mail's public JWK x decoder; re-encoding rejects unused pad bits.
-    decoded = base64.urlsafe_b64decode(value + "=")
-    if base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii") != value:
-        raise InvoiceError(f"Cannot validate {name}: the Ed25519 public key must use canonical base64url.")
-    return value
+    return _require_public_key(value, name, error=InvoiceError)
 
 
 def require_asset(value: str, name: str = "asset") -> str:

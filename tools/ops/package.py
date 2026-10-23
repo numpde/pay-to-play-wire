@@ -344,6 +344,7 @@ print('Installed voucher Pydantic adapter: core values, JSON, schema and seriali
         acceptance_code = """
 import importlib.abc
 import importlib.resources
+import base64
 import json
 import sys
 from pathlib import Path
@@ -378,6 +379,7 @@ for case in vectors['cases']:
     assert artifact.voucher == SignedVoucher.from_json(artifact.voucher.to_json())
     assert json.loads(raw)['voucher']['signature'] == artifact.voucher.signature
     assert artifact.accepted_at == json.loads(raw)['acceptedAt']
+    assert artifact.signer == base64.urlsafe_b64encode(public.public_bytes_raw()).rstrip(b'=').decode('ascii')
     response = Response(acceptance=artifact)
     assert response == Response.model_validate_json(response.model_dump_json())
     assert artifact == adapter.validate_json(artifact.to_json())
@@ -387,6 +389,40 @@ for case in vectors['cases']:
         pass
     else:
         raise AssertionError('Untrusted receipt key authenticated an acceptance.')
+    other = Ed25519PrivateKey.generate()
+    changed = artifact.document
+    changed['signer'] = base64.urlsafe_b64encode(other.public_key().public_bytes_raw()).rstrip(b'=').decode('ascii')
+    other_raw = encode_acceptance(changed)
+    try:
+        sign_acceptance(other_raw, private)
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Signing accepted a mismatched carried signer.')
+    untrusted = sign_acceptance(other_raw, other)
+    assert changed == verify_acceptance(untrusted, public_key=other.public_key())
+    try:
+        verify_acceptance(untrusted, public_key=public)
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Self-declared signer replaced configured trust.')
+    trusted_signature = base64.urlsafe_b64encode(private.sign(untrusted.signing_input)).rstrip(b'=').decode('ascii')
+    mismatched = SignedAcceptance(untrusted.protected, untrusted.payload, trusted_signature)
+    for expected_key in (public, other.public_key()):
+        try:
+            verify_acceptance(mismatched, public_key=expected_key)
+        except AcceptanceError:
+            pass
+        else:
+            raise AssertionError('Carried signer and signature key were allowed to disagree.')
+    old_header = base64.urlsafe_b64encode(b'{"alg":"Ed25519","typ":"application/vnd.signed-purchase-acceptance.v1+json"}').rstrip(b'=').decode('ascii')
+    try:
+        SignedAcceptance(old_header, artifact.payload, artifact.signature)
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError('Installed acceptance admitted the v1 profile.')
     changed = artifact.document
     changed['acceptedAt'] += 1
     payload = sign_acceptance(encode_acceptance(changed), private).payload
@@ -410,7 +446,7 @@ for case in vectors['cases']:
         pass
     else:
         raise AssertionError('Acceptance adapter accepted a malformed signature segment.')
-print('Installed acceptance: vectors, exact voucher/time binding, trusted key, adapter and blocked Ethereum imports passed.')
+print('Installed acceptance: v2 vectors, exact signer/voucher/time binding, explicit trust, v1 rejection, adapter and blocked Ethereum imports passed.')
 """
         for candidate in (wheel, rebuilt[0]):
             # Both distributions must supply the whole package in a fresh

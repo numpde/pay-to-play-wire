@@ -11,7 +11,7 @@ title: wire — invoices, vouchers and signed acceptances
 | --- | --- | --- |
 | Invoice | A service provider | A service description, requested payment and named parties |
 | Voucher | A buyer or an application-authorized signer | A cumulative payment authorization referring to a signed invoice |
-| Acceptance | A receiving service's authorized acceptance signer | The complete signed voucher and the time the service records for its acceptance |
+| Acceptance | A receiving service's authorized acceptance signer | The signing public key, complete signed voucher and signing time |
 
 For example, an analysis service could sign an offer to fit a spectrum. A client could verify that offer and sign a voucher containing its exact invoice hash. The receiving service would then check the voucher and decide whether to accept the purchase.
 
@@ -21,7 +21,7 @@ A valid signature links a message to a signing key. Your application establishes
 
 Acceptance uses Ed25519. It lets a recipient authenticate a service's signed statement about one exact voucher. The producing application owns the decision to accept and the historical authority of the voucher signer. This format defines no later status or fulfillment policy.
 
-The acceptance API below is included in release 0.7.0, pinned below. To exercise the guide from this repository, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order.
+The acceptance v2 examples below require the 0.8.0 candidate in this checkout. The published 0.7.0 pin below supports the earlier acceptance profile without `signer`. To exercise the candidate guide, use the README's dependency and image preparation, then `make test/repository`; that maintained container command executes every Python example in order. The installation pin will be updated after the new release is qualified and published.
 
 ## Install the complete package
 
@@ -191,7 +191,7 @@ The final equality assertion checks the voucher's invoice reference separately. 
 
 ## Sign and verify an acceptance
 
-An acceptance contains exactly two payload fields: the **complete signed voucher**, including its original 65-byte signature, and `acceptedAt`, the recorded acceptance time in Unix seconds. `acceptedAt` must be a canonical nonnegative JSON integer in `0..2**53 - 1`; booleans, strings, fractions, exponents and negative zero are rejected. The codec reads no clock and applies no cutoff or ordering policy.
+An acceptance v2 contains exactly three payload fields: `signer`, the signing Ed25519 public key; `voucher`, the **complete signed voucher**, including its original 65-byte signature; and `acceptedAt`, the signing time in Unix seconds. The public key uses the same canonical unpadded base64url encoding of 32 raw bytes as the invoice's `provider`. `acceptedAt` must be a canonical nonnegative JSON integer in `0..2**53 - 1`; booleans, strings, fractions, exponents and negative zero are rejected. The caller supplies the time; the codec reads no clock and applies no cutoff or ordering policy. Signing time is independent of application decision, database creation and commit times.
 
 Continue the examples above. This creates a local demonstration statement; it does not make an actual purchase decision or consult a signer registry:
 
@@ -205,6 +205,7 @@ from wire.acceptance import (
 
 acceptance_key = Ed25519PrivateKey.generate()
 acceptance_bytes = encode_acceptance({
+    "signer": public_key_text(acceptance_key.public_key()),
     "voucher": received_voucher.to_dict(),
     "acceptedAt": 2000000000,
 })
@@ -217,11 +218,14 @@ receipt_document = verify_acceptance(received_acceptance, public_key=trusted_acc
 assert received_acceptance.voucher == received_voucher
 assert receipt_document["voucher"]["signature"] == received_voucher.signature
 assert received_acceptance.accepted_at == 2000000000
+assert received_acceptance.signer == public_key_text(trusted_acceptance_key)
 ```
 
-`verify_acceptance` returns the authenticated two-field document. Obtain the expected acceptance verification key from trusted application state, independently of the received message. The receipt carries no signer selector. Its signature covers both fields and the original voucher signature; changing any carried value requires a new receipt signature.
+`sign_acceptance` requires the carried `signer` to match the private key's public key before signing the exact supplied bytes. It does not insert or replace payload fields. `verify_acceptance` returns the authenticated three-field document only when the carried signer equals the caller's trusted public key and the signature verifies. Obtain that trusted key independently of the received message. The signature covers all three fields and the original voucher signature; changing any carried value requires a new receipt signature.
 
-`SignedAcceptance.voucher` returns a structurally validated `SignedVoucher`, and `.accepted_at` returns the integer timestamp. Neither accessor verifies an Ethereum signature or establishes the voucher signer's historical authority. Structural voucher parsing, acceptance verification and the Pydantic adapters do not import Ethereum backends. The complete package installs those dependencies; voucher signing, signature verification and digest computation load them when called.
+Carrying the full public key lets the artifact identify its signer without a separate stored key or database lookup. Verification authenticates that identity; it does not grant trust or authorization. The same principle applies to invoice `provider`, while voucher signatures use the protocol's standard signer recovery. Applications still own key delivery, trust, authorization and key rotation.
+
+`SignedAcceptance.signer` returns the encoded public key, `.voucher` returns a structurally validated `SignedVoucher`, and `.accepted_at` returns the integer timestamp. Accessors do not authenticate the acceptance, verify an Ethereum signature or establish the voucher signer's historical authority. Structural voucher parsing, acceptance verification and the Pydantic adapters do not import Ethereum backends. The complete package installs those dependencies; voucher signing, signature verification and digest computation load them when called.
 
 Acceptance protocol and signature failures raise `AcceptanceError`, a `ValueError`. The raw JSON and key arguments retain explicit `TypeError` contracts. Applications decide whether the verified statement is sufficient for their next operation; this API performs no fulfillment, settlement or later status check.
 
@@ -273,9 +277,9 @@ JSON Schema describes field structure and text constraints. Core parsing additio
 
 ### Acceptance identity: retain the original JWS
 
-Acceptance uses the same three-string flattened JWS transport and canonical unpadded base64url as invoices. Its protected header is `{"alg":"Ed25519","typ":"application/vnd.signed-purchase-acceptance.v1+json"}`, with the same media-type comparison rules described below. The signature covers ASCII(`protected + "." + payload`). Invoice and acceptance profiles cannot substitute for one another, even under the same key.
+Acceptance uses the same three-string flattened JWS transport and canonical unpadded base64url as invoices. Its protected header is `{"alg":"Ed25519","typ":"application/vnd.signed-purchase-acceptance.v2+json"}`, with the same media-type comparison rules described below. The signature covers ASCII(`protected + "." + payload`). The earlier acceptance v1 profile is rejected. Invoice and acceptance profiles cannot substitute for one another, even under the same key.
 
-Retain and forward the original acceptance segments. `acceptance.compact`, `.payload_bytes`, `.document`, `.signing_input` and `from_compact` have the same preservation contracts as their invoice counterparts. This profile defines no additional acceptance hash, UUID, signer field or duplicated invoice-hash field. The invoice reference remains inside the complete carried voucher.
+Retain and forward the original acceptance segments. `acceptance.compact`, `.payload_bytes`, `.document`, `.signing_input` and `from_compact` have the same preservation contracts as their invoice counterparts. This profile defines no additional acceptance hash, UUID or duplicated invoice-hash field. The invoice reference remains inside the complete carried voucher.
 
 ### Invoice identity: preserve the three signed strings
 
@@ -320,9 +324,9 @@ Core diagnostics identify the failed rule without echoing the document. Invoice 
 
 ## Reproducibility and verification evidence
 
-The 0.7.0 release was built from committed source `3c0930fa54386692af45af08aee3ca5473486fba`. Lint, 134 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. Tests include independent acceptance JWS verification and exact regeneration, altered voucher/time rejection, and structural acceptance use while Ethereum imports are actively blocked. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.7.0) contains the source distribution, source inventory, hash manifest and logs.
+The preceding 0.7.0 release was built from committed source `3c0930fa54386692af45af08aee3ca5473486fba`. Lint, 134 tests and fresh installations of both the wheel and the wheel rebuilt from the source distribution passed in the maintained containers. Those checks cover the earlier acceptance v1 profile. Downloaded draft assets and qualification logs matched the checked bytes before public release; an anonymous public-wheel download also matched. The [0.7.0 release](https://github.com/numpde/pay-to-play-wire/releases/tag/v0.7.0) contains that version's source distribution, source inventory, hash manifest and logs. Acceptance v2 frozen-source and installed-artifact qualification remains pending for the 0.8.0 candidate.
 
-Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The acceptance vector is new in 0.7.0:
+Shared test vectors are installed with the package. They contain fixed expected messages and results for comparing implementations. The candidate acceptance vector uses the v2 profile introduced in 0.8.0:
 
 ```python
 from importlib.resources import files
